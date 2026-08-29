@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
       title: "Liderim.lol Ağalık Başvurusu",
       description: `${plate} plakalı şehir için liderlik başvurusu`,
       payload: `aga_${plate}_${message.from?.id ?? "user"}`,
-      provider_token: "",
       currency: "XTR",
       prices: [{ label: "Ağalık başvurusu", amount: STAR_PRICE }],
     });
