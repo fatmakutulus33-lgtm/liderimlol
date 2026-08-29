@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#e11d48" />
+  <title>liderim.lol — Türkiye'nin Lider Şehri Hangisi?</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Manrope','sans-serif'],mono:['DM Mono','monospace']},colors:{brand:'#e11d48'}}}}</script>
+  <style>
+    :root{--bg:#fcfcfd;--panel:#fff;--ink:#18181b;--muted:#71717a;--line:#e4e4e7;--soft:#fff1f2;--brand:#e11d48} .dark{--bg:#09090b;--panel:#18181b;--ink:#fafafa;--muted:#a1a1aa;--line:#3f3f46;--soft:#35121e}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,sans-serif;transition:background .25s,color .25s} .panel{background:var(--panel);border:1px solid var(--line)} .muted{color:var(--muted)} .dot-grid{background-image:radial-gradient(var(--line) .7px,transparent .7px);background-size:14px 14px}.city{fill:#e4e4e7;stroke:#a1a1aa;stroke-width:1.4;cursor:pointer;transition:fill .2s,transform .2s}.dark .city{fill:#3f3f46;stroke:#71717a}.city:hover,.city.active{fill:#e11d48;stroke:#be123c}.city.high{fill:#fb7185}.city.mid{fill:#fda4af}.city-label{font:600 10px Manrope,sans-serif;fill:#52525b;pointer-events:none}.dark .city-label{fill:#d4d4d8}.map-frame{box-shadow:0 20px 65px rgba(225,29,72,.08)} dialog::backdrop{background:rgba(0,0,0,.55);backdrop-filter:blur(3px)} dialog{border:0;background:transparent;padding:0}.pill{transition:all .2s}.pill:hover{transform:translateY(-1px)}
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="sticky top-0 z-20 border-b backdrop-blur-xl" style="border-color:var(--line);background:color-mix(in srgb,var(--bg) 86%,transparent)">
+    <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5">
+      <a href="#top" class="flex items-center gap-2.5 font-extrabold tracking-tight text-xl"><span class="grid h-7 w-9 place-items-center rounded-lg border border-rose-200 bg-rose-50 text-sm dark:border-rose-900 dark:bg-rose-950">★</span>liderim<span class="text-brand">.lol</span></a>
+      <nav class="hidden items-center gap-5 text-sm font-bold sm:flex"><a href="#siralama">Sıralama</a><a href="#agalar" class="text-brand">♛ Ağalar</a><a href="#hakkinda" class="muted">Hakkında</a><a href="#kurallar" class="muted">Kurallar</a></nav>
+      <button id="theme" aria-label="Temayı değiştir" class="pill grid h-9 w-9 place-items-center rounded-full panel text-sm">◐</button>
+    </div>
+  </header>
+  <main id="top" class="mx-auto max-w-5xl px-4 pb-20 pt-7">
+    <section class="text-center">
+      <div class="mb-4 flex justify-center gap-2 overflow-auto font-mono text-[10px] font-medium uppercase tracking-wide muted"><span class="flex items-center gap-1.5 text-zinc-800 dark:text-zinc-100"><i class="h-1.5 w-1.5 rounded-full bg-emerald-500"></i><b id="online">124</b> online</span><span>/</span><span><b>1.842</b> ziyaret</span><span>/</span><span><b id="votes">5.726</b> oy</span><span>/</span><span class="text-brand"><b>₺0</b> hasılat</span></div>
+      <h1 class="mx-auto max-w-2xl text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">Türkiye'nin En Büyük <span class="text-brand">Lideri</span> Hangisi?</h1>
+      <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed muted">Ücretsiz oy ver, haritada şehrini renklendir ve liderlik yarışında zirveye taşı.</p>
+      <p class="mt-3 text-xs muted">Türkiye'nin şehir şehir nabzı.</p>
+    </section>
+
+    <section class="map-frame panel mt-8 rounded-3xl p-4 sm:p-6">
+      <div class="flex flex-col justify-between gap-3 border-b pb-4 sm:flex-row sm:items-center" style="border-color:var(--line)">
+        <div><h2 class="flex items-center gap-2 text-lg font-extrabold"><span class="grid h-5 w-7 place-items-center rounded bg-brand text-[9px] text-white">TR</span> Canlı Harita</h2><p class="mt-1 text-xs muted">Bir şehre dokun, detayları gör ve oyunu ver.</p></div>
+        <div class="flex items-center gap-2 font-mono text-[10px] muted"><span>Az oy</span><i class="h-2.5 w-28 rounded-full border" style="background:linear-gradient(90deg,#fecdd3,#e11d48,#881337);border-color:var(--line)"></i><span class="font-bold" style="color:var(--ink)">Çok oy</span></div>
+      </div>
+      <div class="relative mt-3 overflow-hidden rounded-2xl dot-grid py-4">
+        <div class="absolute right-3 top-3 z-10 flex flex-col overflow-hidden rounded-xl panel"><button class="h-8 w-8 border-b text-lg" style="border-color:var(--line)">+</button><button class="h-8 w-8 text-lg">−</button></div>
+        <svg id="map" viewBox="0 0 960 400" role="img" aria-label="Türkiye şehirleri interaktif haritası" class="mx-auto block w-full min-w-[640px] max-w-4xl px-3">
+          <path d="M52 129 L118 98 193 115 246 94 311 106 357 88 420 105 476 91 530 111 585 94 639 117 705 104 766 130 858 125 904 163 880 205 906 245 856 278 787 264 726 292 652 274 594 310 515 284 449 313 382 279 305 296 248 271 181 294 126 262 70 275 48 231 75 192 Z" fill="none" stroke="var(--line)" stroke-width="9" stroke-linejoin="round" opacity=".55"/>
+          <g id="cities"></g>
+        </svg>
+      </div>
+    </section>
+
+    <section id="agalar" class="panel mt-7 overflow-hidden rounded-3xl p-5 sm:p-6" style="background:linear-gradient(120deg,var(--panel),var(--soft))"><div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p class="font-mono text-[10px] font-bold uppercase tracking-widest text-brand">Günün lideri</p><h2 class="mt-1 text-xl font-extrabold">Bugünün zirvesi henüz boş.</h2><p class="mt-1 max-w-xl text-xs leading-relaxed muted">İlk liderlik rozeti burada sergilenecek. Şehrinin liderliğini al, markanı Türkiye'ye duyur.</p></div><button class="pill rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-rose-500/20">Liderlik detayları</button></div></section>
+
+    <section id="siralama" class="mt-9">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 class="text-xl font-extrabold">Şehir Sıralaması</h2><p class="mt-1 text-xs muted">Her oy, şehrinin liderlik puanına eklenir.</p></div><label class="relative block"><span class="pointer-events-none absolute left-3 top-2 text-sm muted">⌕</span><input id="search" placeholder="Şehir ara..." class="w-full rounded-xl border bg-transparent py-2 pl-9 pr-4 text-xs outline-none sm:w-56" style="border-color:var(--line);color:var(--ink)"></label></div>
+      <div id="regions" class="mt-4 flex gap-1.5 overflow-auto pb-1"><button data-region="Tümü" class="region pill rounded-lg border px-3 py-1.5 text-xs font-bold" style="border-color:var(--line);background:var(--panel)">Tüm Bölgeler</button><button data-region="Marmara" class="region pill rounded-lg px-3 py-1.5 text-xs muted">Marmara</button><button data-region="İç Anadolu" class="region pill rounded-lg px-3 py-1.5 text-xs muted">İç Anadolu</button><button data-region="Ege" class="region pill rounded-lg px-3 py-1.5 text-xs muted">Ege</button><button data-region="Akdeniz" class="region pill rounded-lg px-3 py-1.5 text-xs muted">Akdeniz</button><button data-region="Karadeniz" class="region pill rounded-lg px-3 py-1.5 text-xs muted">Karadeniz</button><button data-region="Doğu Anadolu" class="region pill rounded-lg px-3 py-1.5 text-xs muted">Doğu Anadolu</button><button data-region="Güneydoğu Anadolu" class="region pill rounded-lg px-3 py-1.5 text-xs muted">Güneydoğu Anadolu</button></div>
+      <div id="ranking" class="mt-4 grid gap-2 sm:grid-cols-2"></div>
+    </section>
+  </main>
+  <footer class="border-t py-6 text-center text-xs muted" style="border-color:var(--line)">© 2026 liderim.lol — Türkiye'nin 81 İl Liderlik Sıralaması.</footer>
+
+  <dialog id="modal"><div class="w-[min(92vw,380px)] rounded-3xl p-6 shadow-2xl" style="background:var(--panel);color:var(--ink)"><button id="close" class="float-right text-lg muted">×</button><p class="font-mono text-[10px] font-bold uppercase tracking-widest text-brand">Şehir detayı</p><h2 id="modalName" class="mt-1 text-3xl font-extrabold"></h2><p id="modalScore" class="mt-2 text-sm muted"></p><div class="mt-5 rounded-2xl p-4" style="background:var(--soft)"><p class="text-xs font-bold">Şehrini liderliğe taşı</p><p class="mt-1 text-xs muted">Her ziyaretçinin tek aktif oy hakkı vardır.</p><button id="vote" class="mt-4 w-full rounded-xl bg-brand py-2.5 text-sm font-bold text-white">Bu şehre oy ver</button></div></div></dialog>
+  <script>
+   const cities=[['İstanbul','Marmara',1458,144,132],['Ankara','İç Anadolu',1204,327,181],['İzmir','Ege',982,100,246],['Bursa','Marmara',814,167,172],['Antalya','Akdeniz',751,270,265],['Konya','İç Anadolu',608,384,181],['Trabzon','Karadeniz',574,620,150],['Gaziantep','Güneydoğu Anadolu',519,765,244],['Adana','Akdeniz',486,488,274],['Samsun','Karadeniz',443,531,157],['Erzurum','Doğu Anadolu',399,710,207],['Diyarbakır','Güneydoğu Anadolu',376,793,270],['Mersin','Akdeniz',340,419,276],['Eskişehir','İç Anadolu',319,348,211],['Van','Doğu Anadolu',287,838,205],['Muğla','Ege',265,181,258]];
+   let selected=null,region='Tümü'; const $=s=>document.querySelector(s); const cityGroup=$('#cities');
+   cities.forEach((c,i)=>{const [name,,score,x,y]=c;const g=document.createElementNS('http://www.w3.org/2000/svg','g');g.innerHTML=`<circle class="city ${i<3?'high':i<7?'mid':''}" data-i="${i}" cx="${x}" cy="${y}" r="${i<3?19:15}"/><text class="city-label" x="${x}" y="${y+4}" text-anchor="middle">${name}</text>`;cityGroup.append(g)});
+   function render(){const term=$('#search').value.toLocaleLowerCase('tr');const arr=cities.filter(c=>(region==='Tümü'||c[1]===region)&&c[0].toLocaleLowerCase('tr').includes(term)).sort((a,b)=>b[2]-a[2]);$('#ranking').innerHTML=arr.map((c,i)=>`<button class="rank panel flex items-center gap-3 rounded-2xl p-3 text-left pill" data-city="${c[0]}"><b class="grid h-8 w-8 place-items-center rounded-lg text-xs" style="background:var(--soft);color:var(--brand)">${i+1}</b><span class="flex-1"><b class="block text-sm">${c[0]}</b><small class="muted">${c[1]}</small></span><span class="text-right"><b class="block text-sm">${c[2].toLocaleString('tr-TR')}</b><small class="muted">oy</small></span></button>`).join('')||'<p class="py-8 text-center text-sm muted">Bu filtrede şehir bulunamadı.</p>';document.querySelectorAll('.rank').forEach(b=>b.onclick=()=>openCity(cities.find(c=>c[0]===b.dataset.city)))}
+   function openCity(c){selected=c;$('#modalName').textContent=c[0];$('#modalScore').textContent=`${c[2].toLocaleString('tr-TR')} oy ile ${c[1]} bölgesinde yarışıyor.`;$('#modal').showModal()}
+   $('#map').addEventListener('click',e=>{let i=e.target.dataset.i;if(i!==undefined)openCity(cities[i])});$('#close').onclick=()=>$('#modal').close();$('#search').oninput=render;$('#regions').onclick=e=>{if(!e.target.dataset.region)return;region=e.target.dataset.region;document.querySelectorAll('.region').forEach(x=>{x.style.background='';x.style.borderColor='transparent';x.classList.add('muted')});e.target.style.background='var(--panel)';e.target.style.borderColor='var(--line)';e.target.classList.remove('muted');render()};$('#theme').onclick=()=>document.documentElement.classList.toggle('dark');$('#vote').onclick=()=>{if(!selected)return;selected[2]++;$('#votes').textContent=(5726+1).toLocaleString('tr-TR');$('#modalScore').textContent=`${selected[2].toLocaleString('tr-TR')} oy ile ${selected[1]} bölgesinde yarışıyor.`;render();$('#vote').textContent='Oyun kaydedildi ✓';setTimeout(()=>$('#modal').close(),700)};render();
+  </script>
+</body></html>

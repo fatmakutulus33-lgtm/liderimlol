@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+:root { --bg:#fcfcfd; --panel:#fff; --ink:#18181b; --muted:#71717a; --line:#e4e4e7; --soft:#fff1f2; --brand:#e11d48; }
+.dark { --bg:#09090b; --panel:#18181b; --ink:#fafafa; --muted:#a1a1aa; --line:#3f3f46; --soft:#35121e; }
+* { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; background:var(--bg); color:var(--ink); font-family:Arial,Helvetica,sans-serif; transition:background .25s,color .25s; }
+.panel { background:var(--panel); border:1px solid var(--line); }.muted { color:var(--muted); }.dot-grid { background-image:radial-gradient(var(--line) .7px,transparent .7px); background-size:14px 14px; }.pill { transition:all .2s; }.pill:hover { transform:translateY(-1px); }
+.turkey-map svg { display:block; width:100%; height:auto; }.turkey-map [data-iladi] path { fill:#e4e4e7; stroke:#a1a1aa; stroke-width:.8px; stroke-linejoin:round; cursor:pointer; transition:fill .18s ease,stroke .18s ease; }.dark .turkey-map [data-iladi] path { fill:#3f3f46; stroke:#71717a; }.turkey-map [data-level="low"] path { fill:#fecdd3; stroke:#fb7185; }.turkey-map [data-level="mid"] path { fill:#fb7185; stroke:#e11d48; }.turkey-map [data-level="high"] path { fill:#be123c; stroke:#881337; }.turkey-map [data-iladi]:hover path { fill:#e11d48; stroke:#881337; stroke-width:1.4px; }.dark .turkey-map [data-iladi]:hover path { fill:#fb7185; }
