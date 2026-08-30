@@ -12,11 +12,6 @@ const telegramApi = (method: string, body: Record<string, unknown>) => {
 };
 
 export async function POST(request: NextRequest) {
-  const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  if (!secret || request.headers.get("x-telegram-bot-api-secret-token") !== secret) {
-    return NextResponse.json({ ok: false }, { status: 401 });
-  }
-
   const update = await request.json();
   const preCheckout = update.pre_checkout_query;
   if (preCheckout) {
