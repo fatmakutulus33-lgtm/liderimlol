@@ -91,9 +91,13 @@ export async function POST(request: Request) {
         return Response.json({ free: true, ...(await state(body.visitorId)) });
       }
       if (leaderError.code !== "23505") throw leaderError;
-      const { error: applicationError } = await supabase.from("city_applications").insert({ visitor_id: body.visitorId, city_plate: body.cityPlate, title, url: body.url, logo_url: logoUrl, offered_stars: 100 });
+      const { data: application, error: applicationError } = await supabase
+        .from("city_applications")
+        .insert({ visitor_id: body.visitorId, city_plate: body.cityPlate, title, url: body.url, logo_url: logoUrl, offered_stars: 100, status: "pending" })
+        .select("id")
+        .single();
       if (applicationError) throw applicationError;
-      return Response.json({ free: false, ...(await state(body.visitorId)) });
+      return Response.json({ free: false, applicationId: application.id, ...(await state(body.visitorId)) });
     }
     return Response.json({ error: "Bilinmeyen işlem." }, { status: 400 });
   } catch {

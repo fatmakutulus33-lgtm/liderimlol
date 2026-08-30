@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   const payment = message.successful_payment;
   if (payment?.currency === "XTR" && payment.total_amount > 0) {
-    const payloadMatch = /^aga_(\d{2})_(?:\d+|user)$/.exec(payment.invoice_payload ?? "");
+    const payloadMatch = /^aga_(\d{2})_([0-9a-f-]{36}|\d+|user)$/.exec(payment.invoice_payload ?? "");
     if (payloadMatch) {
       const supabase = database();
       const { error } = await supabase.from("star_payments").upsert({
@@ -43,14 +43,13 @@ export async function POST(request: NextRequest) {
       }, { onConflict: "telegram_payment_charge_id" });
       if (error) throw error;
 
-      const { data: application, error: applicationError } = await supabase
+      let applicationQuery = supabase
         .from("city_applications")
         .select("id,visitor_id,title,url,logo_url")
         .eq("city_plate", payloadMatch[1])
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .eq("status", "pending");
+      if (/^[0-9a-f-]{36}$/i.test(payloadMatch[2])) applicationQuery = applicationQuery.eq("id", payloadMatch[2]);
+      const { data: application, error: applicationError } = await applicationQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (applicationError) throw applicationError;
 
       if (application) {
@@ -99,14 +98,14 @@ export async function POST(request: NextRequest) {
   }
 
   const text = typeof message.text === "string" ? message.text : "";
-  const match = text.match(/^\/start\s+aga_(\d{1,2})$/);
+  const match = text.match(/^\/start\s+aga_(\d{1,2})(?:_([0-9a-f-]{36}))?$/i);
   if (match) {
     const plate = match[1].padStart(2, "0");
     await telegramApi("sendInvoice", {
       chat_id: message.chat.id,
       title: "Liderim.lol Ağalık Başvurusu",
       description: `${plate} plakalı şehir için liderlik başvurusu`,
-      payload: `aga_${plate}_${message.from?.id ?? "user"}`,
+      payload: `aga_${plate}_${match[2] ?? message.from?.id ?? "user"}`,
       currency: "XTR",
       prices: [{ label: "Ağalık başvurusu", amount: STAR_PRICE }],
     });

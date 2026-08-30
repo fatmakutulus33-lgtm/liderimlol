@@ -166,7 +166,7 @@ export default function Home() {
     }
     setApplications((a) => ({ ...a, [selected.name]: { title: brand.trim(), url: url.trim(), price: AGA_STAR_PRICE, logoUrl: logo.trim() || undefined } }));
     window.open(
-      `https://t.me/${telegramBotUsername}?start=aga_${selected.plate}`,
+      `https://t.me/${telegramBotUsername}?start=aga_${selected.plate}_${payload.applicationId}`,
       "_blank",
       "noopener,noreferrer",
     );
