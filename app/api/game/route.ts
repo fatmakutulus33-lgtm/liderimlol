@@ -17,14 +17,15 @@ function database() {
 async function state(visitorId?: string) {
   const supabase = database();
   const activeSince = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-  const [{ data: voteRows, error: voteError }, { data: leaderRows, error: leaderError }, visitorVote, totalVisitors, activeVisitors] = await Promise.all([
+  const [{ data: voteRows, error: voteError }, { data: leaderRows, error: leaderError }, { data: paymentRows, error: paymentError }, visitorVote, totalVisitors, activeVisitors] = await Promise.all([
     supabase.from("city_votes").select("city_plate"),
     supabase.from("city_leaders").select("city_plate,title,url,logo_url,price"),
+    supabase.from("star_payments").select("stars"),
     visitorId ? supabase.from("city_votes").select("city_plate").eq("visitor_id", visitorId).maybeSingle() : Promise.resolve({ data: null, error: null }),
     supabase.from("site_visitors").select("visitor_id", { count: "exact", head: true }),
     supabase.from("site_visitors").select("visitor_id", { count: "exact", head: true }).gte("last_seen", activeSince),
   ]);
-  if (voteError || leaderError || visitorVote.error || totalVisitors.error || activeVisitors.error) throw voteError ?? leaderError ?? visitorVote.error ?? totalVisitors.error ?? activeVisitors.error;
+  if (voteError || leaderError || paymentError || visitorVote.error || totalVisitors.error || activeVisitors.error) throw voteError ?? leaderError ?? paymentError ?? visitorVote.error ?? totalVisitors.error ?? activeVisitors.error;
   const counts = new Map<string, number>();
   voteRows.forEach((row) => counts.set(row.city_plate, (counts.get(row.city_plate) ?? 0) + 1));
   const cities = initialCities.map((city) => ({ ...city, votes: counts.get(city.plate) ?? 0 }));
@@ -33,7 +34,11 @@ async function state(visitorId?: string) {
     cities,
     leaders,
     myCityPlate: visitorVote.data?.city_plate ?? null,
-    stats: { totalVisitors: totalVisitors.count ?? 0, activeUsers: activeVisitors.count ?? 0 },
+    stats: {
+      totalVisitors: totalVisitors.count ?? 0,
+      activeUsers: activeVisitors.count ?? 0,
+      paidStars: paymentRows.reduce((sum, payment) => sum + payment.stars, 0),
+    },
   };
 }
 

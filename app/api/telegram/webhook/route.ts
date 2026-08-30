@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 const STAR_PRICE = 100;
+const database = () => {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!url || !key) throw new Error("Supabase bağlantısı yapılandırılmamış.");
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+};
 const telegramApi = (method: string, body: Record<string, unknown>) => {
   const token = process.env.LIDERIM_TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error("LIDERIM_TELEGRAM_BOT_TOKEN is not configured");
@@ -23,10 +30,21 @@ export async function POST(request: NextRequest) {
   if (!message) return NextResponse.json({ ok: true });
 
   const payment = message.successful_payment;
-  if (payment?.currency === "XTR" && payment.total_amount === STAR_PRICE) {
+  if (payment?.currency === "XTR" && payment.total_amount > 0) {
+    const payloadMatch = /^aga_(\d{2})_(?:\d+|user)$/.exec(payment.invoice_payload ?? "");
+    if (payloadMatch) {
+      const { error } = await database().from("star_payments").upsert({
+        telegram_payment_charge_id: payment.telegram_payment_charge_id,
+        city_plate: payloadMatch[1],
+        stars: payment.total_amount,
+        telegram_user_id: message.from?.id ?? null,
+        invoice_payload: payment.invoice_payload,
+      }, { onConflict: "telegram_payment_charge_id" });
+      if (error) throw error;
+    }
     await telegramApi("sendMessage", {
       chat_id: message.chat.id,
-      text: "100 Stars ödemen alındı. Liderlik başvurun incelemeye gönderildi; onaylandığında şehir haritasında yayınlanacak.",
+      text: `${payment.total_amount} Stars ödemen alındı. Liderlik başvurun incelemeye gönderildi; onaylandığında şehir haritasında yayınlanacak.`,
     });
     return NextResponse.json({ ok: true });
   }

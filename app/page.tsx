@@ -15,6 +15,8 @@ const regions = [
 const number = (value: number) => value.toLocaleString("tr-TR");
 type Aga = { title: string; url: string; price: number; logoUrl?: string };
 const AGA_STAR_PRICE = 100;
+const STAR_USD_ESTIMATE = 0.013;
+const USD_TRY_ESTIMATE = 48;
 const telegramBotUsername =
   process.env.NEXT_PUBLIC_LIDERIM_TELEGRAM_BOT_USERNAME || "liderimlolbot";
 const linkForDisplay = (value: string) => {
@@ -36,14 +38,14 @@ export default function Home() {
     [brand, setBrand] = useState(""),
     [url, setUrl] = useState(""),
     [logo, setLogo] = useState(""),
-    [stats, setStats] = useState({ totalVisitors: 0, activeUsers: 0 }),
+    [stats, setStats] = useState({ totalVisitors: 0, activeUsers: 0, paidStars: 0 }),
     [visitorId, setVisitorId] = useState("");
 
   const applyDatabaseState = (payload: {
     cities: City[];
     leaders: Record<string, { title: string; url: string; logo_url: string | null; price: number }>;
     myCityPlate: string | null;
-    stats: { totalVisitors: number; activeUsers: number };
+    stats: { totalVisitors: number; activeUsers: number; paidStars: number };
   }) => {
     setCities(payload.cities);
     setAgas(Object.fromEntries(payload.cities.flatMap((city) => {
@@ -204,7 +206,14 @@ export default function Home() {
             <span>/</span>
             <span>{number(total)} oy</span>
             <span>/</span>
-            <span className="text-rose-600">$0 hasılat</span>
+            <span
+              className="text-rose-600"
+              title="Dolar ve TL değerleri yaklaşık gösterimdir. Stars tahsilatı esas alınır."
+            >
+              {number(stats.paidStars)} Stars · ≈ $
+              {(stats.paidStars * STAR_USD_ESTIMATE).toFixed(2)} · ≈ ₺
+              {number(Math.round(stats.paidStars * STAR_USD_ESTIMATE * USD_TRY_ESTIMATE))}
+            </span>
           </div>
           <h1 className="mx-auto max-w-2xl text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
             Türkiye&apos;nin En Büyük{" "}
