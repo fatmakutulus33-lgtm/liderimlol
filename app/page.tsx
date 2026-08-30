@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TurkeyMap } from "./components/TurkeyMap";
 import { baseAgaPrice, initialCities, type City } from "./data/cities";
 const regions = [
@@ -17,7 +17,6 @@ type Aga = { title: string; url: string; price: number; logoUrl?: string };
 const AGA_STAR_PRICE = 100;
 const telegramBotUsername =
   process.env.NEXT_PUBLIC_LIDERIM_TELEGRAM_BOT_USERNAME || "liderimlolbot";
-const demoUsers: [] = [];
 export default function Home() {
   const [dark, setDark] = useState(false),
     [cities, setCities] = useState(initialCities),
@@ -32,7 +31,33 @@ export default function Home() {
     [brand, setBrand] = useState(""),
     [url, setUrl] = useState(""),
     [logo, setLogo] = useState(""),
-    [offer, setOffer] = useState(AGA_STAR_PRICE);
+    [offer, setOffer] = useState(AGA_STAR_PRICE),
+    [visitorId, setVisitorId] = useState("");
+
+  const applyDatabaseState = (payload: {
+    cities: City[];
+    leaders: Record<string, { title: string; url: string; logo_url: string | null; price: number }>;
+    myCityPlate: string | null;
+  }) => {
+    setCities(payload.cities);
+    setAgas(Object.fromEntries(payload.cities.flatMap((city) => {
+      const leader = payload.leaders[city.plate];
+      return leader ? [[city.name, { title: leader.title, url: leader.url, logoUrl: leader.logo_url ?? undefined, price: leader.price }]] : [];
+    })));
+    setMyCity(payload.cities.find((city) => city.plate === payload.myCityPlate)?.name ?? null);
+  };
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("liderim-visitor-id");
+    const id = saved ?? crypto.randomUUID();
+    if (!saved) window.localStorage.setItem("liderim-visitor-id", id);
+    setVisitorId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!visitorId) return;
+    fetch(`/api/game?visitor=${encodeURIComponent(visitorId)}`).then((response) => response.ok ? response.json() : null).then((payload) => { if (payload) applyDatabaseState(payload); }).catch(() => undefined);
+  }, [visitorId]);
   const total = cities.reduce((sum, c) => sum + c.votes, 0);
   const ranked = useMemo(
     () =>
@@ -77,47 +102,30 @@ export default function Home() {
       setForm(false);
     }
   };
-  const vote = (name: string) => {
+  const vote = async (name: string) => {
     if (myCity === name) return flash(`${name} için aktif oyun zaten kayıtlı.`);
-    setCities((all) =>
-      all.map((c) => ({
-        ...c,
-        votes:
-          c.name === name
-            ? c.votes + 1
-            : c.name === myCity
-              ? Math.max(0, c.votes - 1)
-              : c.votes,
-      })),
-    );
-    setMyCity(name);
-    flash(
-      myCity
-        ? `Oyun ${name} olarak güncellendi.`
-        : `${name} için oyun kaydedildi!`,
-    );
+    const city = cities.find((item) => item.name === name);
+    if (!city || !visitorId) return flash("Bağlantı hazırlanıyor, tekrar dene.");
+    const response = await fetch("/api/game", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "vote", visitorId, cityPlate: city.plate }) });
+    const payload = await response.json();
+    if (!response.ok) return flash(payload.error ?? "Oyun kaydedilemedi.");
+    applyDatabaseState(payload);
+    flash(myCity ? `Oyun ${name} olarak güncellendi.` : `${name} için oyun kaydedildi!`);
   };
-  const claim = () => {
+  const claim = async () => {
     if (!selected || !brand.trim() || !url.trim())
       return flash("Link ve marka adını gir.");
-    const claimData = {
-      title: brand.trim(),
-      url: url.trim(),
-      price: AGA_STAR_PRICE,
-      logoUrl: logo.trim() || undefined,
-    };
-    const freeClaimed =
-      window.localStorage.getItem("liderim-free-city-claimed") === "true";
-    if (!freeClaimed) {
-      setAgas((a) => ({ ...a, [selected.name]: { ...claimData, price: 0 } }));
-      window.localStorage.setItem("liderim-free-city-claimed", "true");
+    if (!visitorId) return flash("Bağlantı hazırlanıyor, tekrar dene.");
+    const response = await fetch("/api/game", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "claim", visitorId, cityPlate: selected.plate, title: brand.trim(), url: url.trim(), logoUrl: logo.trim() || undefined }) });
+    const payload = await response.json();
+    if (!response.ok) return flash(payload.error ?? "Başvuru kaydedilemedi.");
+    applyDatabaseState(payload);
+    if (payload.free) {
       setForm(false);
-      flash(
-        `${selected.name} için ilk şehir liderliğin ücretsiz etkinleştirildi!`,
-      );
+      flash(`${selected.name} için ilk şehir liderliğin ücretsiz etkinleştirildi!`);
       return;
     }
-    setApplications((a) => ({ ...a, [selected.name]: claimData }));
+    setApplications((a) => ({ ...a, [selected.name]: { title: brand.trim(), url: url.trim(), price: AGA_STAR_PRICE, logoUrl: logo.trim() || undefined } }));
     window.open(
       `https://t.me/${telegramBotUsername}?start=aga_${selected.plate}`,
       "_blank",
@@ -176,7 +184,7 @@ export default function Home() {
           <div className="mb-4 flex justify-center gap-2 font-mono text-[10px] uppercase tracking-wide muted">
             <span className="flex items-center gap-1.5">
               <i className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {demoUsers.length} kullanıcı
+              0 kullanıcı
             </span>
             <span>/</span>
             <span>0 ziyaret</span>
