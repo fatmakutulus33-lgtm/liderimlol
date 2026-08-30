@@ -2,28 +2,519 @@
 import { useMemo, useState } from "react";
 import { TurkeyMap } from "./components/TurkeyMap";
 import { baseAgaPrice, initialCities, type City } from "./data/cities";
-const regions = ["Tümü", "Marmara", "İç Anadolu", "Ege", "Akdeniz", "Karadeniz", "Doğu Anadolu", "Güneydoğu Anadolu"];
+const regions = [
+  "Tümü",
+  "Marmara",
+  "İç Anadolu",
+  "Ege",
+  "Akdeniz",
+  "Karadeniz",
+  "Doğu Anadolu",
+  "Güneydoğu Anadolu",
+];
 const number = (value: number) => value.toLocaleString("tr-TR");
 type Aga = { title: string; url: string; price: number; logoUrl?: string };
 const AGA_STAR_PRICE = 100;
-const telegramBotUsername = process.env.NEXT_PUBLIC_LIDERIM_TELEGRAM_BOT_USERNAME || "liderimlolbot";
+const telegramBotUsername =
+  process.env.NEXT_PUBLIC_LIDERIM_TELEGRAM_BOT_USERNAME || "liderimlolbot";
 const demoUsers: [] = [];
 export default function Home() {
- const [dark,setDark]=useState(false),[cities,setCities]=useState(initialCities),[query,setQuery]=useState(""),[region,setRegion]=useState("Tümü"),[selected,setSelected]=useState<City|null>(null),[myCity,setMyCity]=useState<string|null>(null),[toast,setToast]=useState(""),[agas,setAgas]=useState<Record<string,Aga>>({}),[applications,setApplications]=useState<Record<string,Aga>>({}),[form,setForm]=useState(false),[brand,setBrand]=useState(""),[url,setUrl]=useState(""),[logo,setLogo]=useState(""),[offer,setOffer]=useState(AGA_STAR_PRICE);
- const total=cities.reduce((sum,c)=>sum+c.votes,0); const ranked=useMemo(()=>cities.filter(c=>(region==="Tümü"||c.region===region)&&(c.name.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr"))||c.plate.includes(query))).sort((a,b)=>b.votes-a.votes),[cities,query,region]); const top=Object.entries(agas).sort(([,a],[,b])=>b.price-a.price)[0]; const leaders=Object.fromEntries(Object.entries(agas).map(([city,aga])=>{let domain="";try{domain=new URL(aga.url).hostname}catch{}return [city,{title:aga.title,logoUrl:aga.logoUrl||`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}] }));
- const flash=(m:string)=>{setToast(m);window.setTimeout(()=>setToast(""),3200)}; const select=(name:string)=>{const c=cities.find(x=>x.name===name);if(c){setSelected(c);setForm(false)}};
- const vote=(name:string)=>{if(myCity===name)return flash(`${name} için aktif oyun zaten kayıtlı.`);setCities(all=>all.map(c=>({...c,votes:c.name===name?c.votes+1:c.name===myCity?Math.max(0,c.votes-1):c.votes})));setMyCity(name);flash(myCity?`Oyun ${name} olarak güncellendi.`:`${name} için oyun kaydedildi!`)};
- const claim=()=>{if(!selected||!brand.trim()||!url.trim())return flash("Link ve marka adını gir.");const claimData={title:brand.trim(),url:url.trim(),price:AGA_STAR_PRICE,logoUrl:logo.trim()||undefined};const freeClaimed=window.localStorage.getItem("liderim-free-city-claimed")==="true";if(!freeClaimed){setAgas(a=>({...a,[selected.name]:{...claimData,price:0}}));window.localStorage.setItem("liderim-free-city-claimed","true");setForm(false);flash(`${selected.name} için ilk şehir liderliğin ücretsiz etkinleştirildi!`);return;}setApplications(a=>({...a,[selected.name]:claimData}));window.open(`https://t.me/${telegramBotUsername}?start=aga_${selected.plate}`,"_blank","noopener,noreferrer");setForm(false);flash(`${selected.name} için 100 Stars ödeme talebi botta hazırlandı.`)};
- return <div className={dark?"dark min-h-screen":"min-h-screen"}>
-  <header className="sticky top-0 z-20 border-b backdrop-blur-xl" style={{borderColor:"var(--line)",background:"color-mix(in srgb,var(--bg) 90%,transparent)"}}><div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5"><a href="#top" className="flex items-center gap-2.5 text-xl font-extrabold tracking-tight"><span className="grid h-7 w-9 place-items-center rounded-lg bg-rose-600 text-sm text-white">★</span>liderim<span className="text-rose-600">.lol</span></a><nav className="hidden gap-5 text-sm font-bold sm:flex"><a href="#siralama">Sıralama</a><a href="#agalar" className="text-rose-600">♛ Ağalar</a><a href="#hakkinda" className="muted">Hakkında</a><a href="#kurallar" className="muted">Kurallar</a></nav><button onClick={()=>setDark(!dark)} aria-label="Temayı değiştir" className="pill panel grid h-9 w-9 place-items-center rounded-full">◐</button></div></header>
-  {toast&&<div className="fixed right-4 top-16 z-50 rounded-2xl bg-zinc-900 px-4 py-3 text-xs font-bold text-white shadow-2xl dark:bg-white dark:text-zinc-900">{toast}</div>}
-  <main id="top" className="mx-auto max-w-5xl px-4 pb-20 pt-7"><section className="text-center"><div className="mb-4 flex justify-center gap-2 font-mono text-[10px] uppercase tracking-wide muted"><span className="flex items-center gap-1.5"><i className="h-1.5 w-1.5 rounded-full bg-emerald-500"/>{demoUsers.length} demo kullanıcı</span><span>/</span><span>0 ziyaret</span><span>/</span><span>{number(total)} oy</span><span>/</span><span className="text-rose-600">$0 hasılat</span></div><h1 className="mx-auto max-w-2xl text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">Türkiye&apos;nin En Büyük <span className="text-rose-600">Lideri</span> Hangisi?</h1><p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed muted">Şehrine ücretsiz oy ver, haritada renklendir ve liderlik yarışında zirveye taşı.</p></section>
-   <section className="panel mt-8 rounded-3xl p-4 shadow-2xl shadow-rose-500/5 sm:p-6"><div className="flex flex-col justify-between gap-3 border-b pb-4 sm:flex-row sm:items-center" style={{borderColor:"var(--line)"}}><div><h2 className="flex items-center gap-2 text-lg font-extrabold"><span className="grid h-5 w-7 place-items-center rounded bg-rose-600 text-[9px] text-white">TR</span> Canlı Harita</h2><p className="mt-1 text-xs muted">Bir şehir seç; detayını aç, oy ver veya liderliğini devral.</p></div><div className="flex items-center gap-2 font-mono text-[10px] muted"><span>Az oy</span><i className="h-2.5 w-28 rounded-full" style={{background:"linear-gradient(90deg,#fecdd3,#e11d48,#881337)"}}/><span>Çok oy</span></div></div><div className="dot-grid mt-3 overflow-x-auto rounded-2xl py-4"><TurkeyMap cities={cities} leaders={leaders} onSelect={select}/></div></section>
-   <section id="agalar" className="panel mt-7 rounded-3xl p-5 sm:p-6" style={{background:"linear-gradient(120deg,var(--panel),var(--soft))"}}>{top?<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-mono text-[10px] font-bold uppercase tracking-widest text-rose-600">Günün lideri</p><h2 className="mt-1 text-xl font-extrabold">{top[0]} Lideri · {top[1].title}</h2><p className="mt-1 text-xs muted">Bugünün en yüksek liderlik teklifi: ${top[1].price}</p></div><a href={top[1].url} target="_blank" rel="noreferrer" className="pill rounded-xl bg-rose-600 px-4 py-2.5 text-center text-sm font-bold text-white">Lideri ziyaret et</a></div>:<div><p className="font-mono text-[10px] font-bold uppercase tracking-widest text-rose-600">Günün lideri</p><h2 className="mt-1 text-xl font-extrabold">Bugünün zirvesi henüz boş.</h2><p className="mt-1 text-xs muted">İlk liderlik rozeti burada sergilenecek.</p></div>}</section>
-   <section id="siralama" className="mt-9"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-xl font-extrabold">Şehir Sıralaması</h2><p className="mt-1 text-xs muted">81 il, tek sıralama. İlk üç şehir öne çıkar.</p></div><label className="relative block"><span className="pointer-events-none absolute left-3 top-2 text-sm muted">⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Şehir veya plaka ara..." className="w-full rounded-xl border bg-transparent py-2 pl-9 pr-4 text-xs outline-none sm:w-56" style={{borderColor:"var(--line)",color:"var(--ink)"}}/></label></div><div className="mt-4 flex gap-1.5 overflow-auto pb-1">{regions.map(item=><button key={item} onClick={()=>setRegion(item)} className="pill rounded-lg px-3 py-1.5 text-xs font-bold" style={{background:region===item?"var(--panel)":"transparent",border:region===item?"1px solid var(--line)":"1px solid transparent",color:region===item?"var(--ink)":"var(--muted)"}}>{item==="Tümü"?"Tüm Bölgeler":item}</button>)}</div><div className="mt-4 grid gap-2">{ranked.map((city,index)=>{const aga=agas[city.name],share=(total ? city.votes/total*100 : 0).toFixed(1);return <article key={city.name} className="pill panel rounded-2xl p-3 sm:p-4"><div className="flex flex-wrap items-center gap-3"><b className="grid h-9 w-9 place-items-center rounded-xl text-sm" style={{background:index<3?"#e11d48":"var(--soft)",color:index<3?"#fff":"var(--brand)"}}>#{index+1}</b><span className="rounded-md border px-1.5 py-0.5 font-mono text-[10px] muted" style={{borderColor:"var(--line)"}}>{city.plate}</span><button onClick={()=>select(city.name)} className="text-left"><b className="block text-sm">{city.name}</b><small className="muted">{city.region}</small></button><span className="ml-auto text-right"><b className="block text-sm">%{share}</b><small className="muted">{number(city.votes)} oy</small></span><button onClick={()=>vote(city.name)} className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white">{myCity===city.name?"Oyun burada":"Oy Ver"}</button></div>{aga&&<div className="mt-3 flex items-center justify-between rounded-xl border px-3 py-2 text-xs" style={{borderColor:"var(--line)",background:"var(--soft)"}}><span>♛ {city.name} Lideri · <b>{aga.title}</b> · ${aga.price}</span><button onClick={()=>select(city.name)} className="font-bold text-rose-600">Devral · ${aga.price+1}</button></div>}</article>})}</div></section>
-   <section id="hakkinda" className="panel mt-9 rounded-3xl p-6"><h2 className="text-xl font-extrabold">Hakkında</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed muted">liderim.lol; 81 il için oy, sıralama ve şehir liderliği konseptini bir araya getiren canlı bir yarışma platformudur.</p></section><section id="kurallar" className="panel mt-4 rounded-3xl p-6"><h2 className="text-xl font-extrabold">Kurallar</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed muted">Bir ziyaretçinin tek aktif oyu olur; şehir değiştirildiğinde eski oy geri alınır. Liderlikte minimum teklif taban fiyattır; mevcut lider varsa en az $1 artış gerekir.</p></section>
-  </main>
-  {selected&&<div className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4 backdrop-blur-sm"><div className="w-full max-w-md rounded-3xl p-6 shadow-2xl" style={{background:"var(--panel)"}}><button onClick={()=>setSelected(null)} className="float-right text-lg muted">×</button><p className="font-mono text-[10px] font-bold uppercase tracking-widest text-rose-600">{selected.plate} · şehir detayı</p><h2 className="mt-1 text-3xl font-extrabold">{selected.name}</h2><p className="mt-2 text-sm muted">{number(cities.find(c=>c.name===selected.name)?.votes??selected.votes)} oy · {selected.region} · sıralamayı canlı etkiler.</p><button onClick={()=>vote(selected.name)} className="mt-5 w-full rounded-xl bg-rose-600 py-3 text-sm font-bold text-white">{myCity===selected.name?"Aktif oyun bu şehirde":`${selected.name}'a Oy Ver`}</button><div className="mt-5 border-t pt-4" style={{borderColor:"var(--line)"}}><div className="flex items-center justify-between"><b className="text-sm">♛ {selected.name} Liderlik Başvurusu</b><span className="font-mono text-xs muted">taban teklif ${agas[selected.name]?.price?agas[selected.name].price+1:baseAgaPrice(selected.plate)}</span></div>{applications[selected.name]&&<p className="mt-2 rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">{applications[selected.name].title} başvurusu incelemede. Ödeme alınmadan liderlik aktif edilmez.</p>}<button onClick={()=>{setForm(!form);setLogo(applications[selected.name]?.logoUrl||"");setOffer((agas[selected.name]?.price??baseAgaPrice(selected.plate))+(agas[selected.name]?1:0))}} className="mt-3 w-full rounded-xl border py-2.5 text-sm font-bold text-rose-600" style={{borderColor:"var(--line)"}}>Liderlik Başvurusu Yap</button>{form&&<div className="mt-3 space-y-2 rounded-2xl p-3" style={{background:"var(--soft)"}}><input value={url} onChange={e=>setUrl(e.target.value)} placeholder="Web sitesi veya profil linki" className="w-full rounded-xl border bg-transparent px-3 py-2 text-xs" style={{borderColor:"var(--line)"}}/><input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Marka / başlık" className="w-full rounded-xl border bg-transparent px-3 py-2 text-xs" style={{borderColor:"var(--line)"}}/><input value={logo} onChange={e=>setLogo(e.target.value)} placeholder="Logo görsel bağlantısı (isteğe bağlı)" className="w-full rounded-xl border bg-transparent px-3 py-2 text-xs" style={{borderColor:"var(--line)"}}/><label className="block text-xs font-bold">Teklif ($)<input type="number" min={baseAgaPrice(selected.plate)} value={offer} onChange={e=>setOffer(Number(e.target.value))} className="mt-1 w-full rounded-xl border bg-transparent px-3 py-2" style={{borderColor:"var(--line)"}}/></label><button onClick={claim} className="w-full rounded-xl bg-rose-600 py-2.5 text-sm font-bold text-white">Başvuruyu incelemeye gönder</button><p className="text-[11px] leading-relaxed muted">Başvuru ücretsizdir; liderlik, uygun tahsilat altyapısı kurulmadan otomatik etkinleşmez.</p></div>}</div></div></div>}
-  <footer className="border-t py-6 text-center text-xs muted" style={{borderColor:"var(--line)"}}>© 2026 liderim.lol — Türkiye&apos;nin 81 İl Liderlik Sıralaması.</footer>
- </div>;
+  const [dark, setDark] = useState(false),
+    [cities, setCities] = useState(initialCities),
+    [query, setQuery] = useState(""),
+    [region, setRegion] = useState("Tümü"),
+    [selected, setSelected] = useState<City | null>(null),
+    [myCity, setMyCity] = useState<string | null>(null),
+    [toast, setToast] = useState(""),
+    [agas, setAgas] = useState<Record<string, Aga>>({}),
+    [applications, setApplications] = useState<Record<string, Aga>>({}),
+    [form, setForm] = useState(false),
+    [brand, setBrand] = useState(""),
+    [url, setUrl] = useState(""),
+    [logo, setLogo] = useState(""),
+    [offer, setOffer] = useState(AGA_STAR_PRICE);
+  const total = cities.reduce((sum, c) => sum + c.votes, 0);
+  const ranked = useMemo(
+    () =>
+      cities
+        .filter(
+          (c) =>
+            (region === "Tümü" || c.region === region) &&
+            (c.name
+              .toLocaleLowerCase("tr")
+              .includes(query.toLocaleLowerCase("tr")) ||
+              c.plate.includes(query)),
+        )
+        .sort((a, b) => b.votes - a.votes),
+    [cities, query, region],
+  );
+  const top = Object.entries(agas).sort(([, a], [, b]) => b.price - a.price)[0];
+  const leaders = Object.fromEntries(
+    Object.entries(agas).map(([city, aga]) => {
+      let domain = "";
+      try {
+        domain = new URL(aga.url).hostname;
+      } catch {}
+      return [
+        city,
+        {
+          title: aga.title,
+          logoUrl:
+            aga.logoUrl ||
+            `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`,
+        },
+      ];
+    }),
+  );
+  const flash = (m: string) => {
+    setToast(m);
+    window.setTimeout(() => setToast(""), 3200);
+  };
+  const select = (name: string) => {
+    const c = cities.find((x) => x.name === name);
+    if (c) {
+      setSelected(c);
+      setForm(false);
+    }
+  };
+  const vote = (name: string) => {
+    if (myCity === name) return flash(`${name} için aktif oyun zaten kayıtlı.`);
+    setCities((all) =>
+      all.map((c) => ({
+        ...c,
+        votes:
+          c.name === name
+            ? c.votes + 1
+            : c.name === myCity
+              ? Math.max(0, c.votes - 1)
+              : c.votes,
+      })),
+    );
+    setMyCity(name);
+    flash(
+      myCity
+        ? `Oyun ${name} olarak güncellendi.`
+        : `${name} için oyun kaydedildi!`,
+    );
+  };
+  const claim = () => {
+    if (!selected || !brand.trim() || !url.trim())
+      return flash("Link ve marka adını gir.");
+    const claimData = {
+      title: brand.trim(),
+      url: url.trim(),
+      price: AGA_STAR_PRICE,
+      logoUrl: logo.trim() || undefined,
+    };
+    const freeClaimed =
+      window.localStorage.getItem("liderim-free-city-claimed") === "true";
+    if (!freeClaimed) {
+      setAgas((a) => ({ ...a, [selected.name]: { ...claimData, price: 0 } }));
+      window.localStorage.setItem("liderim-free-city-claimed", "true");
+      setForm(false);
+      flash(
+        `${selected.name} için ilk şehir liderliğin ücretsiz etkinleştirildi!`,
+      );
+      return;
+    }
+    setApplications((a) => ({ ...a, [selected.name]: claimData }));
+    window.open(
+      `https://t.me/${telegramBotUsername}?start=aga_${selected.plate}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    setForm(false);
+    flash(`${selected.name} için 100 Stars ödeme talebi botta hazırlandı.`);
+  };
+  return (
+    <div className={dark ? "dark min-h-screen" : "min-h-screen"}>
+      <header
+        className="sticky top-0 z-20 border-b backdrop-blur-xl"
+        style={{
+          borderColor: "var(--line)",
+          background: "color-mix(in srgb,var(--bg) 90%,transparent)",
+        }}
+      >
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3.5">
+          <a
+            href="#top"
+            className="flex items-center gap-2.5 text-xl font-extrabold tracking-tight"
+          >
+            <span className="grid h-7 w-9 place-items-center rounded-lg bg-rose-600 text-sm text-white">
+              ★
+            </span>
+            liderim<span className="text-rose-600">.lol</span>
+          </a>
+          <nav className="hidden gap-5 text-sm font-bold sm:flex">
+            <a href="#siralama">Sıralama</a>
+            <a href="#agalar" className="text-rose-600">
+              ♛ Ağalar
+            </a>
+            <a href="#hakkinda" className="muted">
+              Hakkında
+            </a>
+            <a href="#kurallar" className="muted">
+              Kurallar
+            </a>
+          </nav>
+          <button
+            onClick={() => setDark(!dark)}
+            aria-label="Temayı değiştir"
+            className="pill panel grid h-9 w-9 place-items-center rounded-full"
+          >
+            ◐
+          </button>
+        </div>
+      </header>
+      {toast && (
+        <div className="fixed right-4 top-16 z-50 rounded-2xl bg-zinc-900 px-4 py-3 text-xs font-bold text-white shadow-2xl dark:bg-white dark:text-zinc-900">
+          {toast}
+        </div>
+      )}
+      <main id="top" className="mx-auto max-w-5xl px-4 pb-20 pt-7">
+        <section className="text-center">
+          <div className="mb-4 flex justify-center gap-2 font-mono text-[10px] uppercase tracking-wide muted">
+            <span className="flex items-center gap-1.5">
+              <i className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              {demoUsers.length} kullanıcı
+            </span>
+            <span>/</span>
+            <span>0 ziyaret</span>
+            <span>/</span>
+            <span>{number(total)} oy</span>
+            <span>/</span>
+            <span className="text-rose-600">$0 hasılat</span>
+          </div>
+          <h1 className="mx-auto max-w-2xl text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+            Türkiye&apos;nin En Büyük{" "}
+            <span className="text-rose-600">Lideri</span> Hangisi?
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed muted">
+            Şehrine ücretsiz oy ver, haritada renklendir ve liderlik yarışında
+            zirveye taşı.
+          </p>
+        </section>
+        <section className="panel mt-8 rounded-3xl p-4 shadow-2xl shadow-rose-500/5 sm:p-6">
+          <div
+            className="flex flex-col justify-between gap-3 border-b pb-4 sm:flex-row sm:items-center"
+            style={{ borderColor: "var(--line)" }}
+          >
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-extrabold">
+                <span className="grid h-5 w-7 place-items-center rounded bg-rose-600 text-[9px] text-white">
+                  TR
+                </span>{" "}
+                Canlı Harita
+              </h2>
+              <p className="mt-1 text-xs muted">
+                Bir şehir seç; detayını aç, oy ver veya liderliğini devral.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 font-mono text-[10px] muted">
+              <span>Az oy</span>
+              <i
+                className="h-2.5 w-28 rounded-full"
+                style={{
+                  background: "linear-gradient(90deg,#fecdd3,#e11d48,#881337)",
+                }}
+              />
+              <span>Çok oy</span>
+            </div>
+          </div>
+          <div className="dot-grid mt-3 overflow-x-auto rounded-2xl py-4">
+            <TurkeyMap cities={cities} leaders={leaders} onSelect={select} />
+          </div>
+        </section>
+        <section
+          id="agalar"
+          className="panel mt-7 rounded-3xl p-5 sm:p-6"
+          style={{
+            background: "linear-gradient(120deg,var(--panel),var(--soft))",
+          }}
+        >
+          {top ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-rose-600">
+                  Günün lideri
+                </p>
+                <h2 className="mt-1 text-xl font-extrabold">
+                  {top[0]} Lideri · {top[1].title}
+                </h2>
+                <p className="mt-1 text-xs muted">
+                  Bugünün en yüksek liderlik teklifi: ${top[1].price}
+                </p>
+              </div>
+              <a
+                href={top[1].url}
+                target="_blank"
+                rel="noreferrer"
+                className="pill rounded-xl bg-rose-600 px-4 py-2.5 text-center text-sm font-bold text-white"
+              >
+                Lideri ziyaret et
+              </a>
+            </div>
+          ) : (
+            <div>
+              <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-rose-600">
+                Günün lideri
+              </p>
+              <h2 className="mt-1 text-xl font-extrabold">
+                Bugünün zirvesi henüz boş.
+              </h2>
+              <p className="mt-1 text-xs muted">
+                İlk liderlik rozeti burada sergilenecek.
+              </p>
+            </div>
+          )}
+        </section>
+        <section id="siralama" className="mt-9">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-extrabold">Şehir Sıralaması</h2>
+              <p className="mt-1 text-xs muted">
+                81 il, tek sıralama. İlk üç şehir öne çıkar.
+              </p>
+            </div>
+            <label className="relative block">
+              <span className="pointer-events-none absolute left-3 top-2 text-sm muted">
+                ⌕
+              </span>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Şehir veya plaka ara..."
+                className="w-full rounded-xl border bg-transparent py-2 pl-9 pr-4 text-xs outline-none sm:w-56"
+                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
+              />
+            </label>
+          </div>
+          <div className="mt-4 flex gap-1.5 overflow-auto pb-1">
+            {regions.map((item) => (
+              <button
+                key={item}
+                onClick={() => setRegion(item)}
+                className="pill rounded-lg px-3 py-1.5 text-xs font-bold"
+                style={{
+                  background: region === item ? "var(--panel)" : "transparent",
+                  border:
+                    region === item
+                      ? "1px solid var(--line)"
+                      : "1px solid transparent",
+                  color: region === item ? "var(--ink)" : "var(--muted)",
+                }}
+              >
+                {item === "Tümü" ? "Tüm Bölgeler" : item}
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 grid gap-2">
+            {ranked.map((city, index) => {
+              const aga = agas[city.name],
+                share = (total ? (city.votes / total) * 100 : 0).toFixed(1);
+              return (
+                <article
+                  key={city.name}
+                  className="pill panel rounded-2xl p-3 sm:p-4"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <b
+                      className="grid h-9 w-9 place-items-center rounded-xl text-sm"
+                      style={{
+                        background: index < 3 ? "#e11d48" : "var(--soft)",
+                        color: index < 3 ? "#fff" : "var(--brand)",
+                      }}
+                    >
+                      #{index + 1}
+                    </b>
+                    <span
+                      className="rounded-md border px-1.5 py-0.5 font-mono text-[10px] muted"
+                      style={{ borderColor: "var(--line)" }}
+                    >
+                      {city.plate}
+                    </span>
+                    <button
+                      onClick={() => select(city.name)}
+                      className="text-left"
+                    >
+                      <b className="block text-sm">{city.name}</b>
+                      <small className="muted">{city.region}</small>
+                    </button>
+                    <span className="ml-auto text-right">
+                      <b className="block text-sm">%{share}</b>
+                      <small className="muted">{number(city.votes)} oy</small>
+                    </span>
+                    <button
+                      onClick={() => vote(city.name)}
+                      className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white"
+                    >
+                      {myCity === city.name ? "Oyun burada" : "Oy Ver"}
+                    </button>
+                  </div>
+                  {aga && (
+                    <div
+                      className="mt-3 flex items-center justify-between rounded-xl border px-3 py-2 text-xs"
+                      style={{
+                        borderColor: "var(--line)",
+                        background: "var(--soft)",
+                      }}
+                    >
+                      <span>
+                        ♛ {city.name} Lideri · <b>{aga.title}</b> · ${aga.price}
+                      </span>
+                      <button
+                        onClick={() => select(city.name)}
+                        className="font-bold text-rose-600"
+                      >
+                        Devral · ${aga.price + 1}
+                      </button>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+        <section id="hakkinda" className="panel mt-9 rounded-3xl p-6">
+          <h2 className="text-xl font-extrabold">Hakkında</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed muted">
+            liderim.lol; 81 il için oy, sıralama ve şehir liderliği konseptini
+            bir araya getiren canlı bir yarışma platformudur.
+          </p>
+        </section>
+        <section id="kurallar" className="panel mt-4 rounded-3xl p-6">
+          <h2 className="text-xl font-extrabold">Kurallar</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed muted">
+            Bir ziyaretçinin tek aktif oyu olur; şehir değiştirildiğinde eski oy
+            geri alınır. Liderlikte minimum teklif taban fiyattır; mevcut lider
+            varsa en az $1 artış gerekir.
+          </p>
+        </section>
+      </main>
+      {selected && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
+          <div
+            className="w-full max-w-md rounded-3xl p-6 shadow-2xl"
+            style={{ background: "var(--panel)" }}
+          >
+            <button
+              onClick={() => setSelected(null)}
+              className="float-right text-lg muted"
+            >
+              ×
+            </button>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-widest text-rose-600">
+              {selected.plate} · şehir detayı
+            </p>
+            <h2 className="mt-1 text-3xl font-extrabold">{selected.name}</h2>
+            <p className="mt-2 text-sm muted">
+              {number(
+                cities.find((c) => c.name === selected.name)?.votes ??
+                  selected.votes,
+              )}{" "}
+              oy · {selected.region} · sıralamayı canlı etkiler.
+            </p>
+            <button
+              onClick={() => vote(selected.name)}
+              className="mt-5 w-full rounded-xl bg-rose-600 py-3 text-sm font-bold text-white"
+            >
+              {myCity === selected.name
+                ? "Aktif oyun bu şehirde"
+                : `${selected.name}'a Oy Ver`}
+            </button>
+            <div
+              className="mt-5 border-t pt-4"
+              style={{ borderColor: "var(--line)" }}
+            >
+              <div className="flex items-center justify-between">
+                <b className="text-sm">♛ {selected.name} Liderlik Başvurusu</b>
+                <span className="font-mono text-xs muted">
+                  taban teklif $
+                  {agas[selected.name]?.price
+                    ? agas[selected.name].price + 1
+                    : baseAgaPrice(selected.plate)}
+                </span>
+              </div>
+              {applications[selected.name] && (
+                <p className="mt-2 rounded-xl bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                  {applications[selected.name].title} başvurusu incelemede.
+                  Ödeme alınmadan liderlik aktif edilmez.
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  setForm(!form);
+                  setLogo(applications[selected.name]?.logoUrl || "");
+                  setOffer(
+                    (agas[selected.name]?.price ??
+                      baseAgaPrice(selected.plate)) +
+                      (agas[selected.name] ? 1 : 0),
+                  );
+                }}
+                className="mt-3 w-full rounded-xl border py-2.5 text-sm font-bold text-rose-600"
+                style={{ borderColor: "var(--line)" }}
+              >
+                Liderlik Başvurusu Yap
+              </button>
+              {form && (
+                <div
+                  className="mt-3 space-y-2 rounded-2xl p-3"
+                  style={{ background: "var(--soft)" }}
+                >
+                  <input
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="Web sitesi veya profil linki"
+                    className="w-full rounded-xl border bg-transparent px-3 py-2 text-xs"
+                    style={{ borderColor: "var(--line)" }}
+                  />
+                  <input
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    placeholder="Marka / başlık"
+                    className="w-full rounded-xl border bg-transparent px-3 py-2 text-xs"
+                    style={{ borderColor: "var(--line)" }}
+                  />
+                  <input
+                    value={logo}
+                    onChange={(e) => setLogo(e.target.value)}
+                    placeholder="Logo görsel bağlantısı (isteğe bağlı)"
+                    className="w-full rounded-xl border bg-transparent px-3 py-2 text-xs"
+                    style={{ borderColor: "var(--line)" }}
+                  />
+                  <label className="block text-xs font-bold">
+                    Teklif ($)
+                    <input
+                      type="number"
+                      min={baseAgaPrice(selected.plate)}
+                      value={offer}
+                      onChange={(e) => setOffer(Number(e.target.value))}
+                      className="mt-1 w-full rounded-xl border bg-transparent px-3 py-2"
+                      style={{ borderColor: "var(--line)" }}
+                    />
+                  </label>
+                  <button
+                    onClick={claim}
+                    className="w-full rounded-xl bg-rose-600 py-2.5 text-sm font-bold text-white"
+                  >
+                    Başvuruyu incelemeye gönder
+                  </button>
+                  <p className="text-[11px] leading-relaxed muted">
+                    Başvuru ücretsizdir; liderlik, uygun tahsilat altyapısı
+                    kurulmadan otomatik etkinleşmez.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      <footer
+        className="border-t py-6 text-center text-xs muted"
+        style={{ borderColor: "var(--line)" }}
+      >
+        © 2026 liderim.lol — Türkiye&apos;nin 81 İl Liderlik Sıralaması.
+      </footer>
+    </div>
+  );
 }
