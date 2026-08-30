@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type City = { name: string; votes: number };
+type City = { name: string; plate: string; votes: number };
 type MapLeader = { title: string; logoUrl: string };
 
 export function TurkeyMap({ cities, leaders, onSelect }: { cities: City[]; leaders: Record<string, MapLeader>; onSelect: (name: string) => void }) {
@@ -13,11 +13,14 @@ export function TurkeyMap({ cities, leaders, onSelect }: { cities: City[]; leade
   useEffect(() => {
     const root = container.current;
     if (!root || !svg) return;
-    const score = new Map(cities.map((city) => [city.name, city.votes]));
+    // SVG'deki il adları bazen farklı Unicode karakterleri kullanıyor (Hakkâri gibi).
+    // Plaka kodu sabit olduğu için eşleştirmeyi onunla yapıyoruz.
+    const cityByPlate = new Map(cities.map((city) => [city.plate, city]));
     const onClick = (event: MouseEvent) => {
       const target = event.target as Element;
-      const city = target.closest("[data-iladi]")?.getAttribute("data-iladi")?.replace(/ \(.*\)$/, "");
-      if (city) onSelect(city);
+      const province = target.closest("[data-iladi]");
+      const city = cityByPlate.get(province?.getAttribute("data-plakakodu") ?? "");
+      if (city) onSelect(city.name);
     };
     root.querySelectorAll<SVGGElement>("[data-iladi]").forEach((element) => {
       element.querySelectorAll(".leader-marker").forEach((marker) => marker.remove());
@@ -25,8 +28,9 @@ export function TurkeyMap({ cities, leaders, onSelect }: { cities: City[]; leade
         element.style.display = "none";
         return;
       }
-      const name = (element.dataset.iladi ?? "").replace(/ \(.*\)$/, "");
-      const value = score.get(name) ?? 0;
+      const city = cityByPlate.get(element.dataset.plakakodu ?? "");
+      const name = city?.name ?? (element.dataset.iladi ?? "").replace(/ \(.*\)$/, "");
+      const value = city?.votes ?? 0;
       element.dataset.level = value > 800 ? "high" : value > 400 ? "mid" : value > 0 ? "low" : "none";
       const leader = leaders[name];
       if (leader) {
