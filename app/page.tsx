@@ -14,6 +14,7 @@ const regions = [
 ];
 const number = (value: number) => value.toLocaleString("tr-TR");
 type Aga = { title: string; url: string; price: number; logoUrl?: string };
+type ChatMessage = { id: string; visitor_id: string; nickname: string; body: string; created_at: string };
 const AGA_STAR_PRICE = 100;
 const STAR_USD_ESTIMATE = 0.013;
 const USD_TRY_ESTIMATE = 48;
@@ -39,6 +40,10 @@ export default function Home() {
     [url, setUrl] = useState(""),
     [logo, setLogo] = useState(""),
     [stats, setStats] = useState({ totalVisitors: 0, activeUsers: 0, paidStars: 0 }),
+    [chatMessages, setChatMessages] = useState<ChatMessage[]>([]),
+    [chatMessage, setChatMessage] = useState(""),
+    [nickname, setNickname] = useState(""),
+    [chatSending, setChatSending] = useState(false),
     [visitorId, setVisitorId] = useState("");
 
   const applyDatabaseState = (payload: {
@@ -58,8 +63,10 @@ export default function Home() {
 
   useEffect(() => {
     const saved = window.localStorage.getItem("liderim-visitor-id");
+    const savedNickname = window.localStorage.getItem("liderim-chat-nickname");
     const id = saved ?? crypto.randomUUID();
     if (!saved) window.localStorage.setItem("liderim-visitor-id", id);
+    if (savedNickname) setNickname(savedNickname);
     setVisitorId(id);
   }, []);
 
@@ -74,6 +81,15 @@ export default function Home() {
     const interval = window.setInterval(() => void heartbeat(), 60_000);
     return () => window.clearInterval(interval);
   }, [visitorId]);
+  useEffect(() => {
+    const loadChat = () => fetch("/api/chat")
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => { if (payload) setChatMessages(payload.messages); })
+      .catch(() => undefined);
+    void loadChat();
+    const interval = window.setInterval(() => void loadChat(), 12_000);
+    return () => window.clearInterval(interval);
+  }, []);
   const total = cities.reduce((sum, c) => sum + c.votes, 0);
   const ranked = useMemo(
     () =>
@@ -149,6 +165,21 @@ export default function Home() {
     setForm(false);
     flash(`${selected.name} için 100 Stars ödeme talebi botta hazırlandı.`);
   };
+  const sendChat = async () => {
+    if (!visitorId || !chatMessage.trim() || chatSending) return;
+    setChatSending(true);
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visitorId, nickname, message: chatMessage }),
+    });
+    const payload = await response.json();
+    setChatSending(false);
+    if (!response.ok) return flash(payload.error ?? "Mesaj gönderilemedi.");
+    window.localStorage.setItem("liderim-chat-nickname", nickname.trim());
+    setChatMessages(payload.messages);
+    setChatMessage("");
+  };
   return (
     <div className={dark ? "dark min-h-screen" : "min-h-screen"}>
       <header
@@ -172,6 +203,9 @@ export default function Home() {
             <a href="#siralama">Sıralama</a>
             <a href="#agalar" className="text-rose-600">
               ♛ Ağalar
+            </a>
+            <a href="#sohbet" className="muted">
+              Sohbet
             </a>
             <a href="#hakkinda" className="muted">
               Hakkında
@@ -428,6 +462,61 @@ export default function Home() {
                 </article>
               );
             })}
+          </div>
+        </section>
+        <section id="sohbet" className="panel mt-9 rounded-3xl p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-extrabold">💬 Meydan Sohbeti</h2>
+              <p className="mt-1 text-xs muted">Şehirler, oylar ve liderlik yarışı hakkında konuş.</p>
+            </div>
+            <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-600">
+              canlı
+            </span>
+          </div>
+          <div
+            className="mt-4 max-h-72 space-y-2 overflow-y-auto rounded-2xl border p-3"
+            style={{ borderColor: "var(--line)", background: "var(--soft)" }}
+          >
+            {chatMessages.length ? chatMessages.map((message) => (
+              <div key={message.id} className="rounded-xl bg-white/60 px-3 py-2 text-xs dark:bg-black/10">
+                <div className="flex items-center justify-between gap-2">
+                  <b className="text-rose-600">{message.nickname}</b>
+                  <time className="muted text-[10px]">
+                    {new Date(message.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                  </time>
+                </div>
+                <p className="mt-1 break-words leading-relaxed">{message.body}</p>
+              </div>
+            )) : (
+              <p className="py-8 text-center text-xs muted">Henüz mesaj yok. Meydanı sen başlat!</p>
+            )}
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-[150px_1fr_auto]">
+            <input
+              value={nickname}
+              onChange={(event) => setNickname(event.target.value)}
+              maxLength={32}
+              placeholder="Takma ad"
+              className="rounded-xl border bg-transparent px-3 py-2 text-xs outline-none"
+              style={{ borderColor: "var(--line)" }}
+            />
+            <input
+              value={chatMessage}
+              onChange={(event) => setChatMessage(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Enter") void sendChat(); }}
+              maxLength={500}
+              placeholder="Mesajını yaz..."
+              className="rounded-xl border bg-transparent px-3 py-2 text-xs outline-none"
+              style={{ borderColor: "var(--line)" }}
+            />
+            <button
+              onClick={() => void sendChat()}
+              disabled={!chatMessage.trim() || chatSending}
+              className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {chatSending ? "Gönderiliyor" : "Gönder"}
+            </button>
           </div>
         </section>
         <section id="hakkinda" className="panel mt-9 rounded-3xl p-6">
