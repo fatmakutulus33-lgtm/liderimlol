@@ -361,18 +361,43 @@ export default function Home() {
                   </div>
                   {aga && (
                     <div
-                      className="mt-3 flex items-center justify-between rounded-xl border px-3 py-2 text-xs"
+                      className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border px-3 py-2 text-xs"
                       style={{
                         borderColor: "var(--line)",
                         background: "var(--soft)",
                       }}
                     >
-                      <span>
-                        ♛ {city.name} Lideri · <b>{aga.title}</b> · ${aga.price}
-                      </span>
+                      <a
+                        href={aga.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`${aga.title} sitesini aç`}
+                        className="flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-80"
+                      >
+                        {aga.logoUrl ? (
+                          <img
+                            src={aga.logoUrl}
+                            alt={`${aga.title} logosu`}
+                            className="h-9 w-9 shrink-0 rounded-lg border bg-white object-cover"
+                            style={{ borderColor: "var(--line)" }}
+                          />
+                        ) : (
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-rose-600 text-base text-white">
+                            ♛
+                          </span>
+                        )}
+                        <span className="min-w-0">
+                          <span className="block truncate font-bold text-rose-600 underline underline-offset-2">
+                            {aga.title}
+                          </span>
+                          <span className="block muted">
+                            {city.name} Lideri · Siteye git ↗
+                          </span>
+                        </span>
+                      </a>
                       <button
                         onClick={() => select(city.name)}
-                        className="font-bold text-rose-600"
+                        className="ml-auto font-bold text-rose-600"
                       >
                         Devral · ${aga.price + 1}
                       </button>
