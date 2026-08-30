@@ -16,17 +16,25 @@ function database() {
 
 async function state(visitorId?: string) {
   const supabase = database();
-  const [{ data: voteRows, error: voteError }, { data: leaderRows, error: leaderError }, visitorVote] = await Promise.all([
+  const activeSince = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const [{ data: voteRows, error: voteError }, { data: leaderRows, error: leaderError }, visitorVote, totalVisitors, activeVisitors] = await Promise.all([
     supabase.from("city_votes").select("city_plate"),
     supabase.from("city_leaders").select("city_plate,title,url,logo_url,price"),
     visitorId ? supabase.from("city_votes").select("city_plate").eq("visitor_id", visitorId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    supabase.from("site_visitors").select("visitor_id", { count: "exact", head: true }),
+    supabase.from("site_visitors").select("visitor_id", { count: "exact", head: true }).gte("last_seen", activeSince),
   ]);
-  if (voteError || leaderError || visitorVote.error) throw voteError ?? leaderError ?? visitorVote.error;
+  if (voteError || leaderError || visitorVote.error || totalVisitors.error || activeVisitors.error) throw voteError ?? leaderError ?? visitorVote.error ?? totalVisitors.error ?? activeVisitors.error;
   const counts = new Map<string, number>();
   voteRows.forEach((row) => counts.set(row.city_plate, (counts.get(row.city_plate) ?? 0) + 1));
   const cities = initialCities.map((city) => ({ ...city, votes: counts.get(city.plate) ?? 0 }));
   const leaders = Object.fromEntries((leaderRows as Leader[]).map((leader) => [leader.city_plate, leader]));
-  return { cities, leaders, myCityPlate: visitorVote.data?.city_plate ?? null };
+  return {
+    cities,
+    leaders,
+    myCityPlate: visitorVote.data?.city_plate ?? null,
+    stats: { totalVisitors: totalVisitors.count ?? 0, activeUsers: activeVisitors.count ?? 0 },
+  };
 }
 
 export async function GET(request: Request) {
@@ -41,8 +49,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    if (!isUuid(body.visitorId) || !isPlate(body.cityPlate)) return Response.json({ error: "Geçersiz istek." }, { status: 400 });
+    if (!isUuid(body.visitorId)) return Response.json({ error: "Geçersiz istek." }, { status: 400 });
     const supabase = database();
+
+    if (body.action === "heartbeat") {
+      const { error } = await supabase
+        .from("site_visitors")
+        .upsert({ visitor_id: body.visitorId, last_seen: new Date().toISOString() }, { onConflict: "visitor_id" });
+      if (error) throw error;
+      return Response.json(await state(body.visitorId));
+    }
+
+    if (!isPlate(body.cityPlate)) return Response.json({ error: "Geçersiz istek." }, { status: 400 });
 
     if (body.action === "vote") {
       const { error } = await supabase.from("city_votes").upsert({ visitor_id: body.visitorId, city_plate: body.cityPlate, updated_at: new Date().toISOString() }, { onConflict: "visitor_id" });
@@ -51,19 +69,17 @@ export async function POST(request: Request) {
     }
 
     if (body.action === "claim") {
-      if (typeof body.title !== "string" || typeof body.url !== "string" || body.title.trim().length === 0 || body.title.trim().length > 120 || body.url.length > 2048) return Response.json({ error: "Başvuru bilgileri geçersiz." }, { status: 400 });
-      try { new URL(body.url); } catch { return Response.json({ error: "Geçerli bir bağlantı gir." }, { status: 400 }); }
+      if (typeof body.title !== "string" || typeof body.url !== "string" || body.title.length > 120 || body.url.length > 2048) return Response.json({ error: "Başvuru bilgileri çok uzun." }, { status: 400 });
+      const title = body.title.trim() || "İsimsiz Ağa";
       const logoUrl = typeof body.logoUrl === "string" && body.logoUrl.length <= 2048 ? body.logoUrl : null;
-      const { data: freeClaim, error: freeError } = await supabase.from("free_city_claims").select("visitor_id").eq("visitor_id", body.visitorId).maybeSingle();
-      if (freeError) throw freeError;
-      if (!freeClaim) {
-        const { error: claimError } = await supabase.from("free_city_claims").insert({ visitor_id: body.visitorId, city_plate: body.cityPlate });
-        if (claimError) throw claimError;
-        const { error: leaderError } = await supabase.from("city_leaders").upsert({ city_plate: body.cityPlate, title: body.title.trim(), url: body.url, logo_url: logoUrl, price: 0, visitor_id: body.visitorId }, { onConflict: "city_plate" });
-        if (leaderError) throw leaderError;
+      // Her şehir için yalnızca ilk liderlik ücretsizdir. Birincil anahtar
+      // çakışması, aynı şehre yapılan sonraki başvuruyu ücretli akışa geçirir.
+      const { error: leaderError } = await supabase.from("city_leaders").insert({ city_plate: body.cityPlate, title, url: body.url, logo_url: logoUrl, price: 0, visitor_id: body.visitorId });
+      if (!leaderError) {
         return Response.json({ free: true, ...(await state(body.visitorId)) });
       }
-      const { error: applicationError } = await supabase.from("city_applications").insert({ visitor_id: body.visitorId, city_plate: body.cityPlate, title: body.title.trim(), url: body.url, logo_url: logoUrl, offered_stars: 100 });
+      if (leaderError.code !== "23505") throw leaderError;
+      const { error: applicationError } = await supabase.from("city_applications").insert({ visitor_id: body.visitorId, city_plate: body.cityPlate, title, url: body.url, logo_url: logoUrl, offered_stars: 100 });
       if (applicationError) throw applicationError;
       return Response.json({ free: false, ...(await state(body.visitorId)) });
     }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { TurkeyMap } from "./components/TurkeyMap";
-import { baseAgaPrice, initialCities, type City } from "./data/cities";
+import { initialCities, type City } from "./data/cities";
 const regions = [
   "Tümü",
   "Marmara",
@@ -17,6 +17,11 @@ type Aga = { title: string; url: string; price: number; logoUrl?: string };
 const AGA_STAR_PRICE = 100;
 const telegramBotUsername =
   process.env.NEXT_PUBLIC_LIDERIM_TELEGRAM_BOT_USERNAME || "liderimlolbot";
+const linkForDisplay = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "#";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
 export default function Home() {
   const [dark, setDark] = useState(false),
     [cities, setCities] = useState(initialCities),
@@ -31,13 +36,14 @@ export default function Home() {
     [brand, setBrand] = useState(""),
     [url, setUrl] = useState(""),
     [logo, setLogo] = useState(""),
-    [offer, setOffer] = useState(AGA_STAR_PRICE),
+    [stats, setStats] = useState({ totalVisitors: 0, activeUsers: 0 }),
     [visitorId, setVisitorId] = useState("");
 
   const applyDatabaseState = (payload: {
     cities: City[];
     leaders: Record<string, { title: string; url: string; logo_url: string | null; price: number }>;
     myCityPlate: string | null;
+    stats: { totalVisitors: number; activeUsers: number };
   }) => {
     setCities(payload.cities);
     setAgas(Object.fromEntries(payload.cities.flatMap((city) => {
@@ -45,6 +51,7 @@ export default function Home() {
       return leader ? [[city.name, { title: leader.title, url: leader.url, logoUrl: leader.logo_url ?? undefined, price: leader.price }]] : [];
     })));
     setMyCity(payload.cities.find((city) => city.plate === payload.myCityPlate)?.name ?? null);
+    setStats(payload.stats);
   };
 
   useEffect(() => {
@@ -56,7 +63,14 @@ export default function Home() {
 
   useEffect(() => {
     if (!visitorId) return;
-    fetch(`/api/game?visitor=${encodeURIComponent(visitorId)}`).then((response) => response.ok ? response.json() : null).then((payload) => { if (payload) applyDatabaseState(payload); }).catch(() => undefined);
+    const heartbeat = () => fetch("/api/game", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "heartbeat", visitorId }),
+    }).then((response) => response.ok ? response.json() : null).then((payload) => { if (payload) applyDatabaseState(payload); }).catch(() => undefined);
+    void heartbeat();
+    const interval = window.setInterval(() => void heartbeat(), 60_000);
+    return () => window.clearInterval(interval);
   }, [visitorId]);
   const total = cities.reduce((sum, c) => sum + c.votes, 0);
   const ranked = useMemo(
@@ -113,8 +127,7 @@ export default function Home() {
     flash(myCity ? `Oyun ${name} olarak güncellendi.` : `${name} için oyun kaydedildi!`);
   };
   const claim = async () => {
-    if (!selected || !brand.trim() || !url.trim())
-      return flash("Link ve marka adını gir.");
+    if (!selected) return;
     if (!visitorId) return flash("Bağlantı hazırlanıyor, tekrar dene.");
     const response = await fetch("/api/game", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "claim", visitorId, cityPlate: selected.plate, title: brand.trim(), url: url.trim(), logoUrl: logo.trim() || undefined }) });
     const payload = await response.json();
@@ -184,10 +197,10 @@ export default function Home() {
           <div className="mb-4 flex justify-center gap-2 font-mono text-[10px] uppercase tracking-wide muted">
             <span className="flex items-center gap-1.5">
               <i className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              0 kullanıcı
+              {number(stats.activeUsers)} aktif kullanıcı
             </span>
             <span>/</span>
-            <span>0 ziyaret</span>
+            <span>{number(stats.totalVisitors)} ziyaret</span>
             <span>/</span>
             <span>{number(total)} oy</span>
             <span>/</span>
@@ -368,7 +381,7 @@ export default function Home() {
                       }}
                     >
                       <a
-                        href={aga.url}
+                        href={linkForDisplay(aga.url)}
                         target="_blank"
                         rel="noreferrer"
                         aria-label={`${aga.title} sitesini aç`}
@@ -462,10 +475,7 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 <b className="text-sm">♛ {selected.name} Liderlik Başvurusu</b>
                 <span className="font-mono text-xs muted">
-                  taban teklif $
-                  {agas[selected.name]?.price
-                    ? agas[selected.name].price + 1
-                    : baseAgaPrice(selected.plate)}
+                  {agas[selected.name] ? "100 Stars" : "ilk başvuru ücretsiz"}
                 </span>
               </div>
               {applications[selected.name] && (
@@ -478,11 +488,6 @@ export default function Home() {
                 onClick={() => {
                   setForm(!form);
                   setLogo(applications[selected.name]?.logoUrl || "");
-                  setOffer(
-                    (agas[selected.name]?.price ??
-                      baseAgaPrice(selected.plate)) +
-                      (agas[selected.name] ? 1 : 0),
-                  );
                 }}
                 className="mt-3 w-full rounded-xl border py-2.5 text-sm font-bold text-rose-600"
                 style={{ borderColor: "var(--line)" }}
@@ -497,14 +502,14 @@ export default function Home() {
                   <input
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
-                    placeholder="Web sitesi veya profil linki"
+                    placeholder="Site / profil bilgisi (doğrulama yok)"
                     className="w-full rounded-xl border bg-transparent px-3 py-2 text-xs"
                     style={{ borderColor: "var(--line)" }}
                   />
                   <input
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
-                    placeholder="Marka / başlık"
+                    placeholder="Marka / başlık (isteğe bağlı)"
                     className="w-full rounded-xl border bg-transparent px-3 py-2 text-xs"
                     style={{ borderColor: "var(--line)" }}
                   />
@@ -515,26 +520,15 @@ export default function Home() {
                     className="w-full rounded-xl border bg-transparent px-3 py-2 text-xs"
                     style={{ borderColor: "var(--line)" }}
                   />
-                  <label className="block text-xs font-bold">
-                    Teklif ($)
-                    <input
-                      type="number"
-                      min={baseAgaPrice(selected.plate)}
-                      value={offer}
-                      onChange={(e) => setOffer(Number(e.target.value))}
-                      className="mt-1 w-full rounded-xl border bg-transparent px-3 py-2"
-                      style={{ borderColor: "var(--line)" }}
-                    />
-                  </label>
                   <button
                     onClick={claim}
                     className="w-full rounded-xl bg-rose-600 py-2.5 text-sm font-bold text-white"
                   >
-                    Başvuruyu incelemeye gönder
+                    {agas[selected.name] ? "100 Stars ile başvur" : "Ücretsiz başvuruyu etkinleştir"}
                   </button>
                   <p className="text-[11px] leading-relaxed muted">
-                    Başvuru ücretsizdir; liderlik, uygun tahsilat altyapısı
-                    kurulmadan otomatik etkinleşmez.
+                    Bu şehrin ilk başvurusu ücretsizdir. Aynı şehre yapılan
+                    sonraki başvurularda 100 Stars ödeme talep edilir.
                   </p>
                 </div>
               )}
