@@ -4,6 +4,7 @@ import { initialCities } from "../../data/cities";
 export const dynamic = "force-dynamic";
 
 type Leader = { city_plate: string; title: string; url: string; logo_url: string | null; price: number };
+type LeaderHistory = { city_plate: string; title: string; url: string; logo_url: string | null; created_at: string };
 const isPlate = (value: unknown): value is string => typeof value === "string" && /^\d{2}$/.test(value);
 const isUuid = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -17,22 +18,28 @@ function database() {
 async function state(visitorId?: string) {
   const supabase = database();
   const activeSince = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-  const [{ data: voteRows, error: voteError }, { data: leaderRows, error: leaderError }, { data: paymentRows, error: paymentError }, visitorVote, totalVisitors, activeVisitors] = await Promise.all([
+  const [{ data: voteRows, error: voteError }, { data: leaderRows, error: leaderError }, { data: historyRows, error: historyError }, { data: paymentRows, error: paymentError }, visitorVote, totalVisitors, activeVisitors] = await Promise.all([
     supabase.from("city_votes").select("city_plate"),
     supabase.from("city_leaders").select("city_plate,title,url,logo_url,price"),
+    supabase.from("city_applications").select("city_plate,title,url,logo_url,created_at").eq("status", "historical").order("created_at", { ascending: false }),
     supabase.from("star_payments").select("stars"),
     visitorId ? supabase.from("city_votes").select("city_plate").eq("visitor_id", visitorId).maybeSingle() : Promise.resolve({ data: null, error: null }),
     supabase.from("site_visitors").select("visitor_id", { count: "exact", head: true }),
     supabase.from("site_visitors").select("visitor_id", { count: "exact", head: true }).gte("last_seen", activeSince),
   ]);
-  if (voteError || leaderError || paymentError || visitorVote.error || totalVisitors.error || activeVisitors.error) throw voteError ?? leaderError ?? paymentError ?? visitorVote.error ?? totalVisitors.error ?? activeVisitors.error;
+  if (voteError || leaderError || historyError || paymentError || visitorVote.error || totalVisitors.error || activeVisitors.error) throw voteError ?? leaderError ?? historyError ?? paymentError ?? visitorVote.error ?? totalVisitors.error ?? activeVisitors.error;
   const counts = new Map<string, number>();
   voteRows.forEach((row) => counts.set(row.city_plate, (counts.get(row.city_plate) ?? 0) + 1));
   const cities = initialCities.map((city) => ({ ...city, votes: counts.get(city.plate) ?? 0 }));
   const leaders = Object.fromEntries((leaderRows as Leader[]).map((leader) => [leader.city_plate, leader]));
+  const leaderHistory = (historyRows as LeaderHistory[]).reduce<Record<string, LeaderHistory[]>>((history, leader) => {
+    (history[leader.city_plate] ??= []).push(leader);
+    return history;
+  }, {});
   return {
     cities,
     leaders,
+    leaderHistory,
     myCityPlate: visitorVote.data?.city_plate ?? null,
     stats: {
       totalVisitors: totalVisitors.count ?? 0,

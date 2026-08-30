@@ -14,6 +14,7 @@ const regions = [
 ];
 const number = (value: number) => value.toLocaleString("tr-TR");
 type Aga = { title: string; url: string; price: number; logoUrl?: string };
+type FormerAga = { title: string; url: string; logoUrl?: string; createdAt: string };
 type ChatMessage = { id: string; visitor_id: string; nickname: string; body: string; created_at: string };
 const AGA_STAR_PRICE = 100;
 const STAR_USD_ESTIMATE = 0.013;
@@ -34,6 +35,7 @@ export default function Home() {
     [myCity, setMyCity] = useState<string | null>(null),
     [toast, setToast] = useState(""),
     [agas, setAgas] = useState<Record<string, Aga>>({}),
+    [formerAgas, setFormerAgas] = useState<Record<string, FormerAga[]>>({}),
     [applications, setApplications] = useState<Record<string, Aga>>({}),
     [form, setForm] = useState(false),
     [brand, setBrand] = useState(""),
@@ -49,6 +51,7 @@ export default function Home() {
   const applyDatabaseState = (payload: {
     cities: City[];
     leaders: Record<string, { title: string; url: string; logo_url: string | null; price: number }>;
+    leaderHistory: Record<string, { title: string; url: string; logo_url: string | null; created_at: string }[]>;
     myCityPlate: string | null;
     stats: { totalVisitors: number; activeUsers: number; paidStars: number };
   }) => {
@@ -56,6 +59,10 @@ export default function Home() {
     setAgas(Object.fromEntries(payload.cities.flatMap((city) => {
       const leader = payload.leaders[city.plate];
       return leader ? [[city.name, { title: leader.title, url: leader.url, logoUrl: leader.logo_url ?? undefined, price: leader.price }]] : [];
+    })));
+    setFormerAgas(Object.fromEntries(payload.cities.flatMap((city) => {
+      const history = payload.leaderHistory[city.plate] ?? [];
+      return history.length ? [[city.name, history.map((leader) => ({ title: leader.title, url: leader.url, logoUrl: leader.logo_url ?? undefined, createdAt: leader.created_at }))]] : [];
     })));
     setMyCity(payload.cities.find((city) => city.plate === payload.myCityPlate)?.name ?? null);
     setStats(payload.stats);
@@ -459,6 +466,25 @@ export default function Home() {
                       </button>
                     </div>
                   )}
+                  {formerAgas[city.name]?.length ? (
+                    <div className="mt-2 rounded-xl border px-3 py-2 text-xs" style={{ borderColor: "var(--line)" }}>
+                      <p className="font-mono text-[10px] font-bold uppercase tracking-wider muted">Eski liderler</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {formerAgas[city.name].map((former, historyIndex) => (
+                          <a
+                            key={`${former.title}-${former.createdAt}-${historyIndex}`}
+                            href={linkForDisplay(former.url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 rounded-lg bg-black/5 px-2 py-1.5 font-bold text-rose-600 transition hover:opacity-80 dark:bg-white/10"
+                          >
+                            {former.logoUrl ? <img src={former.logoUrl} alt="" className="h-4 w-4 rounded object-cover" /> : "♛"}
+                            <span>{former.title}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </article>
               );
             })}

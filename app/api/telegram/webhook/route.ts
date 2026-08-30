@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
   if (payment?.currency === "XTR" && payment.total_amount > 0) {
     const payloadMatch = /^aga_(\d{2})_(?:\d+|user)$/.exec(payment.invoice_payload ?? "");
     if (payloadMatch) {
-      const { error } = await database().from("star_payments").upsert({
+      const supabase = database();
+      const { error } = await supabase.from("star_payments").upsert({
         telegram_payment_charge_id: payment.telegram_payment_charge_id,
         city_plate: payloadMatch[1],
         stars: payment.total_amount,
@@ -41,10 +42,58 @@ export async function POST(request: NextRequest) {
         invoice_payload: payment.invoice_payload,
       }, { onConflict: "telegram_payment_charge_id" });
       if (error) throw error;
+
+      const { data: application, error: applicationError } = await supabase
+        .from("city_applications")
+        .select("id,visitor_id,title,url,logo_url")
+        .eq("city_plate", payloadMatch[1])
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (applicationError) throw applicationError;
+
+      if (application) {
+        const { data: currentLeader, error: currentLeaderError } = await supabase
+          .from("city_leaders")
+          .select("visitor_id,title,url,logo_url,price")
+          .eq("city_plate", payloadMatch[1])
+          .maybeSingle();
+        if (currentLeaderError) throw currentLeaderError;
+
+        if (currentLeader) {
+          const { error: historyError } = await supabase.from("city_applications").insert({
+            visitor_id: currentLeader.visitor_id,
+            city_plate: payloadMatch[1],
+            title: currentLeader.title,
+            url: currentLeader.url,
+            logo_url: currentLeader.logo_url,
+            offered_stars: currentLeader.price,
+            status: "historical",
+          });
+          if (historyError) throw historyError;
+        }
+
+        const { error: leaderUpdateError } = await supabase.from("city_leaders").upsert({
+          city_plate: payloadMatch[1],
+          visitor_id: application.visitor_id,
+          title: application.title,
+          url: application.url,
+          logo_url: application.logo_url,
+          price: payment.total_amount,
+        }, { onConflict: "city_plate" });
+        if (leaderUpdateError) throw leaderUpdateError;
+
+        const { error: approvalError } = await supabase
+          .from("city_applications")
+          .update({ status: "approved" })
+          .eq("id", application.id);
+        if (approvalError) throw approvalError;
+      }
     }
     await telegramApi("sendMessage", {
       chat_id: message.chat.id,
-      text: `${payment.total_amount} Stars ödemen alındı. Liderlik başvurun incelemeye gönderildi; onaylandığında şehir haritasında yayınlanacak.`,
+      text: `${payment.total_amount} Stars ödemen alındı. Başvurun onaylandı; liderlik ve şehir geçmişi güncellendi.`,
     });
     return NextResponse.json({ ok: true });
   }
