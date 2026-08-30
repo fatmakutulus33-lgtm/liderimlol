@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type City = { name: string; plate: string; votes: number };
-type MapLeader = { title: string; logoUrl: string };
+type MapLeader = { title: string; logoUrl: string; url: string };
 
 export function TurkeyMap({ cities, leaders, onSelect }: { cities: City[]; leaders: Record<string, MapLeader>; onSelect: (name: string) => void }) {
   const [svg, setSvg] = useState("");
@@ -18,6 +18,12 @@ export function TurkeyMap({ cities, leaders, onSelect }: { cities: City[]; leade
     const cityByPlate = new Map(cities.map((city) => [city.plate, city]));
     const onClick = (event: MouseEvent) => {
       const target = event.target as Element;
+      const marker = target.closest<SVGGElement>(".leader-marker");
+      if (marker?.dataset.url) {
+        const link = /^https?:\/\//i.test(marker.dataset.url) ? marker.dataset.url : `https://${marker.dataset.url}`;
+        window.open(link, "_blank", "noopener,noreferrer");
+        return;
+      }
       const province = target.closest("[data-iladi]");
       const city = cityByPlate.get(province?.getAttribute("data-plakakodu") ?? "");
       if (city) onSelect(city.name);
@@ -35,10 +41,16 @@ export function TurkeyMap({ cities, leaders, onSelect }: { cities: City[]; leade
       const leader = leaders[name];
       if (leader) {
         const box = element.getBBox(); const size = Math.max(13, Math.min(25, Math.min(box.width, box.height) * 0.55)); const ns = "http://www.w3.org/2000/svg";
-        const marker = document.createElementNS(ns, "g"); marker.setAttribute("class", "leader-marker"); marker.setAttribute("pointer-events", "none");
+        const marker = document.createElementNS(ns, "g"); marker.setAttribute("class", "leader-marker"); marker.dataset.url = leader.url; marker.setAttribute("role", "link"); marker.setAttribute("aria-label", `${leader.title} sitesini aç`); marker.style.cursor = "pointer"; marker.style.transformBox = "fill-box"; marker.style.transformOrigin = "center"; marker.style.transition = "transform 180ms ease";
         const circle = document.createElementNS(ns, "circle"); circle.setAttribute("cx", String(box.x + box.width / 2)); circle.setAttribute("cy", String(box.y + box.height / 2)); circle.setAttribute("r", String(size / 2 + 2)); circle.setAttribute("fill", "#ffffff"); circle.setAttribute("stroke", "#e11d48"); circle.setAttribute("stroke-width", "1.5");
         const image = document.createElementNS(ns, "image"); image.setAttribute("href", leader.logoUrl); image.setAttribute("x", String(box.x + box.width / 2 - size / 2)); image.setAttribute("y", String(box.y + box.height / 2 - size / 2)); image.setAttribute("width", String(size)); image.setAttribute("height", String(size)); image.setAttribute("preserveAspectRatio", "xMidYMid slice");
         marker.append(circle, image); element.append(marker);
+        const enlarge = () => { marker.style.transform = "scale(1.65)"; };
+        const shrink = () => { marker.style.transform = "scale(1)"; };
+        element.addEventListener("mouseenter", enlarge);
+        element.addEventListener("mouseleave", shrink);
+        marker.addEventListener("mouseenter", enlarge);
+        marker.addEventListener("mouseleave", shrink);
       }
     });
     root.addEventListener("click", onClick);
