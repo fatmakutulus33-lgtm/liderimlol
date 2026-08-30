@@ -1,12 +1,13 @@
 "use client";
 import { useMemo, useState } from "react";
 import { TurkeyMap } from "./components/TurkeyMap";
-import { baseAgaPrice, demoUsers, initialCities, type City } from "./data/cities";
+import { baseAgaPrice, initialCities, type City } from "./data/cities";
 const regions = ["Tümü", "Marmara", "İç Anadolu", "Ege", "Akdeniz", "Karadeniz", "Doğu Anadolu", "Güneydoğu Anadolu"];
 const number = (value: number) => value.toLocaleString("tr-TR");
 type Aga = { title: string; url: string; price: number; logoUrl?: string };
 const AGA_STAR_PRICE = 100;
 const telegramBotUsername = process.env.NEXT_PUBLIC_LIDERIM_TELEGRAM_BOT_USERNAME || "liderimlolbot";
+const demoUsers: [] = [];
 export default function Home() {
  const [dark,setDark]=useState(false),[cities,setCities]=useState(initialCities),[query,setQuery]=useState(""),[region,setRegion]=useState("Tümü"),[selected,setSelected]=useState<City|null>(null),[myCity,setMyCity]=useState<string|null>(null),[toast,setToast]=useState(""),[agas,setAgas]=useState<Record<string,Aga>>({}),[applications,setApplications]=useState<Record<string,Aga>>({}),[form,setForm]=useState(false),[brand,setBrand]=useState(""),[url,setUrl]=useState(""),[logo,setLogo]=useState(""),[offer,setOffer]=useState(AGA_STAR_PRICE);
  const total=cities.reduce((sum,c)=>sum+c.votes,0); const ranked=useMemo(()=>cities.filter(c=>(region==="Tümü"||c.region===region)&&(c.name.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr"))||c.plate.includes(query))).sort((a,b)=>b.votes-a.votes),[cities,query,region]); const top=Object.entries(agas).sort(([,a],[,b])=>b.price-a.price)[0]; const leaders=Object.fromEntries(Object.entries(agas).map(([city,aga])=>{let domain="";try{domain=new URL(aga.url).hostname}catch{}return [city,{title:aga.title,logoUrl:aga.logoUrl||`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}] }));
