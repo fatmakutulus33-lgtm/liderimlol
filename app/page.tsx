@@ -124,6 +124,7 @@ export default function Home() {
         city,
         {
           title: aga.title,
+          url: aga.url,
           logoUrl:
             aga.logoUrl ||
             `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`,
