@@ -61,25 +61,25 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
         if (currentLeaderError) throw currentLeaderError;
 
-        const { error: leaderUpdateError } = await supabase.from("city_leaders").upsert({
-          city_plate: payloadMatch[1],
-          visitor_id: application.visitor_id,
-          title: application.title,
-          url: application.url,
-          logo_url: application.logo_url,
-          price: payment.total_amount,
-        }, { onConflict: "city_plate" });
-        if (leaderUpdateError) throw leaderUpdateError;
+        const leaderAlreadyApplied = currentLeader?.visitor_id === application.visitor_id
+          && currentLeader.title === application.title
+          && currentLeader.url === application.url
+          && currentLeader.price === payment.total_amount;
 
-        const { error: approvalError } = await supabase
-          .from("city_applications")
-          .update({ status: "approved" })
-          .eq("id", application.id);
-        if (approvalError) throw approvalError;
+        if (!leaderAlreadyApplied) {
+          const { error: leaderUpdateError } = await supabase.from("city_leaders").upsert({
+            city_plate: payloadMatch[1],
+            visitor_id: application.visitor_id,
+            title: application.title,
+            url: application.url,
+            logo_url: application.logo_url,
+            price: payment.total_amount,
+          }, { onConflict: "city_plate" });
+          if (leaderUpdateError) throw leaderUpdateError;
 
-        // Geçmiş listesi ikincil bir görünümdür. Buradaki bir kayıt sorunu,
-        // tamamlanmış Stars ödemesinin lider değişimini engellememelidir.
-        if (currentLeader) {
+          // Geçmiş listesi ikincil bir görünümdür. Buradaki bir kayıt sorunu,
+          // tamamlanmış Stars ödemesinin lider değişimini engellememelidir.
+          if (currentLeader) {
           const { error: historyError } = await supabase.from("city_applications").insert({
             visitor_id: currentLeader.visitor_id,
             city_plate: payloadMatch[1],
@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
             status: "historical",
           });
           if (historyError) console.error("Eski lider geçmişe eklenemedi:", historyError.message);
+          }
         }
       }
     }
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
   });
   return NextResponse.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : JSON.stringify(error);
+    const message = error instanceof Error ? error.message : "Webhook işlenemedi";
     console.error("Telegram ödeme webhook hatası:", error);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
