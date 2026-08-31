@@ -4,7 +4,15 @@ import { initialCities } from "../../data/cities";
 export const dynamic = "force-dynamic";
 
 type Leader = { city_plate: string; title: string; url: string; logo_url: string | null; price: number };
-type LeaderHistory = { city_plate: string; title: string; url: string; logo_url: string | null; created_at: string };
+type LeaderHistory = { id?: string; city_plate: string; title: string; url: string; logo_url: string | null; created_at: string };
+type Payment = { stars: number; invoice_payload: string };
+const recoveredLeaderHistory: LeaderHistory[] = [{
+  city_plate: "33",
+  title: "Mersin Manşet",
+  url: "https://www.instagram.com/mersin.manset",
+  logo_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTB12GdJPtTrnkjbSalUXChgc_V6I4oqTYVSktpsvPzag&s=10",
+  created_at: "2026-08-31T18:58:00.000Z",
+}];
 const isPlate = (value: unknown): value is string => typeof value === "string" && /^\d{2}$/.test(value);
 const isUuid = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -21,8 +29,8 @@ async function state(visitorId?: string) {
   const [{ data: voteRows, error: voteError }, { data: leaderRows, error: leaderError }, { data: historyRows, error: historyError }, { data: paymentRows, error: paymentError }, visitorVote, totalVisitors, activeVisitors] = await Promise.all([
     supabase.from("city_votes").select("city_plate"),
     supabase.from("city_leaders").select("city_plate,title,url,logo_url,price"),
-    supabase.from("city_applications").select("city_plate,title,url,logo_url,created_at").eq("status", "historical").order("created_at", { ascending: false }),
-    supabase.from("star_payments").select("stars"),
+    supabase.from("city_applications").select("id,city_plate,title,url,logo_url,created_at").eq("status", "pending").order("created_at", { ascending: false }),
+    supabase.from("star_payments").select("stars,invoice_payload"),
     visitorId ? supabase.from("city_votes").select("city_plate").eq("visitor_id", visitorId).maybeSingle() : Promise.resolve({ data: null, error: null }),
     supabase.from("site_visitors").select("visitor_id", { count: "exact", head: true }),
     supabase.from("site_visitors").select("visitor_id", { count: "exact", head: true }).gte("last_seen", activeSince),
@@ -32,7 +40,17 @@ async function state(visitorId?: string) {
   voteRows.forEach((row) => counts.set(row.city_plate, (counts.get(row.city_plate) ?? 0) + 1));
   const cities = initialCities.map((city) => ({ ...city, votes: counts.get(city.plate) ?? 0 }));
   const leaders = Object.fromEntries((leaderRows as Leader[]).map((leader) => [leader.city_plate, leader]));
-  const leaderHistory = (historyRows as LeaderHistory[]).reduce<Record<string, LeaderHistory[]>>((history, leader) => {
+  const paidApplicationIds = new Set((paymentRows as Payment[]).flatMap((payment) => {
+    const match = /^aga_\d{2}_([0-9a-f-]{36})$/i.exec(payment.invoice_payload);
+    return match ? [match[1]] : [];
+  }));
+  const paidFormerLeaders = (historyRows as LeaderHistory[]).filter((leader) => {
+    const activeLeader = leaders[leader.city_plate];
+    return paidApplicationIds.has(leader.id ?? "") && (
+      !activeLeader || activeLeader.title !== leader.title || activeLeader.url !== leader.url
+    );
+  });
+  const leaderHistory = [...recoveredLeaderHistory, ...paidFormerLeaders].reduce<Record<string, LeaderHistory[]>>((history, leader) => {
     (history[leader.city_plate] ??= []).push(leader);
     return history;
   }, {});
@@ -44,7 +62,7 @@ async function state(visitorId?: string) {
     stats: {
       totalVisitors: totalVisitors.count ?? 0,
       activeUsers: activeVisitors.count ?? 0,
-      paidStars: paymentRows.reduce((sum, payment) => sum + payment.stars, 0),
+      paidStars: (paymentRows as Payment[]).reduce((sum, payment) => sum + payment.stars, 0),
     },
   };
 }
