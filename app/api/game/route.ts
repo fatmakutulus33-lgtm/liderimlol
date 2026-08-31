@@ -46,9 +46,7 @@ async function state(visitorId?: string) {
   }));
   const paidFormerLeaders = (historyRows as LeaderHistory[]).filter((leader) => {
     const activeLeader = leaders[leader.city_plate];
-    return paidApplicationIds.has(leader.id ?? "") && (
-      !activeLeader || activeLeader.title !== leader.title || activeLeader.url !== leader.url
-    );
+    return paidApplicationIds.has(leader.id ?? "") && activeLeader?.title !== leader.title;
   });
   const leaderHistory = [...recoveredLeaderHistory, ...paidFormerLeaders].reduce<Record<string, LeaderHistory[]>>((history, leader) => {
     (history[leader.city_plate] ??= []).push(leader);
