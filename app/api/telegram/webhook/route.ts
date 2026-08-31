@@ -61,7 +61,8 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
         if (currentLeaderError) throw currentLeaderError;
 
-        const leaderAlreadyApplied = currentLeader?.visitor_id === application.visitor_id
+        const leaderAlreadyApplied = currentLeader !== null
+          && currentLeader.visitor_id === application.visitor_id
           && currentLeader.title === application.title
           && currentLeader.url === application.url
           && currentLeader.price === payment.total_amount;
@@ -80,16 +81,16 @@ export async function POST(request: NextRequest) {
           // Geçmiş listesi ikincil bir görünümdür. Buradaki bir kayıt sorunu,
           // tamamlanmış Stars ödemesinin lider değişimini engellememelidir.
           if (currentLeader) {
-          const { error: historyError } = await supabase.from("city_applications").insert({
-            visitor_id: currentLeader.visitor_id,
-            city_plate: payloadMatch[1],
-            title: currentLeader.title,
-            url: currentLeader.url,
-            logo_url: currentLeader.logo_url,
-            offered_stars: currentLeader.price,
-            status: "historical",
-          });
-          if (historyError) console.error("Eski lider geçmişe eklenemedi:", historyError.message);
+            const { error: historyError } = await supabase.from("city_applications").insert({
+              visitor_id: currentLeader.visitor_id,
+              city_plate: payloadMatch[1],
+              title: currentLeader.title,
+              url: currentLeader.url,
+              logo_url: currentLeader.logo_url,
+              offered_stars: currentLeader.price,
+              status: "historical",
+            });
+            if (historyError) console.error("Eski lider geçmişe eklenemedi:", historyError.message);
           }
         }
       }
