@@ -60,19 +60,6 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
         if (currentLeaderError) throw currentLeaderError;
 
-        if (currentLeader) {
-          const { error: historyError } = await supabase.from("city_applications").insert({
-            visitor_id: currentLeader.visitor_id,
-            city_plate: payloadMatch[1],
-            title: currentLeader.title,
-            url: currentLeader.url,
-            logo_url: currentLeader.logo_url,
-            offered_stars: currentLeader.price,
-            status: "historical",
-          });
-          if (historyError) throw historyError;
-        }
-
         const { error: leaderUpdateError } = await supabase.from("city_leaders").upsert({
           city_plate: payloadMatch[1],
           visitor_id: application.visitor_id,
@@ -88,6 +75,21 @@ export async function POST(request: NextRequest) {
           .update({ status: "approved" })
           .eq("id", application.id);
         if (approvalError) throw approvalError;
+
+        // Geçmiş listesi ikincil bir görünümdür. Buradaki bir kayıt sorunu,
+        // tamamlanmış Stars ödemesinin lider değişimini engellememelidir.
+        if (currentLeader) {
+          const { error: historyError } = await supabase.from("city_applications").insert({
+            visitor_id: currentLeader.visitor_id,
+            city_plate: payloadMatch[1],
+            title: currentLeader.title,
+            url: currentLeader.url,
+            logo_url: currentLeader.logo_url,
+            offered_stars: currentLeader.price,
+            status: "historical",
+          });
+          if (historyError) console.error("Eski lider geçmişe eklenemedi:", historyError.message);
+        }
       }
     }
     await telegramApi("sendMessage", {
