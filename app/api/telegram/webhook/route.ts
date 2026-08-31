@@ -19,6 +19,7 @@ const telegramApi = (method: string, body: Record<string, unknown>) => {
 };
 
 export async function POST(request: NextRequest) {
+  try {
   const update = await request.json();
   const preCheckout = update.pre_checkout_query;
   if (preCheckout) {
@@ -119,4 +120,9 @@ export async function POST(request: NextRequest) {
     text: "Bir şehirden ‘100 Stars ile başvur’ düğmesine dokunarak liderlik başvurusunu başlatabilirsin.",
   });
   return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Bilinmeyen webhook hatası";
+    console.error("Telegram ödeme webhook hatası:", error);
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 }
