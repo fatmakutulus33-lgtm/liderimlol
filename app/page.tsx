@@ -1,5 +1,4 @@
-title: aga.title,"use client";
-          url: aga.url,
+"use client";
 import { useEffect, useMemo, useState } from "react";
 import { TurkeyMap } from "./components/TurkeyMap";
 import { initialCities, type City } from "./data/cities";
