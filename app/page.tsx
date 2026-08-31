@@ -27,6 +27,7 @@ const linkForDisplay = (value: string) => {
   if (!trimmed) return "#";
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 };
+const defaultLeaderLogo = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%23fb7185'/%3E%3Cstop offset='1' stop-color='%239f1239'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g)' d='M32 3 56 12v17c0 15-10 26-24 32C18 55 8 44 8 29V12z'/%3E%3Cpath fill='none' stroke='white' stroke-width='3' stroke-linecap='round' d='m22 34 7 7 14-17'/%3E%3Ccircle cx='32' cy='20' r='4' fill='white'/%3E%3C/svg%3E";
 export default function Home() {
   const [dark, setDark] = useState(false),
     [cities, setCities] = useState(initialCities),
@@ -47,6 +48,7 @@ export default function Home() {
     [chatMessage, setChatMessage] = useState(""),
     [nickname, setNickname] = useState(""),
     [chatSending, setChatSending] = useState(false),
+    [chatOpen, setChatOpen] = useState(false),
     [visitorId, setVisitorId] = useState("");
 
   const applyDatabaseState = (payload: {
@@ -116,18 +118,12 @@ export default function Home() {
   const top = Object.entries(agas).sort(([, a], [, b]) => b.price - a.price)[0];
   const leaders = Object.fromEntries(
     Object.entries(agas).map(([city, aga]) => {
-      let domain = "";
-      try {
-        domain = new URL(aga.url).hostname;
-      } catch {}
       return [
         city,
         {
           title: aga.title,
           url: aga.url,
-          logoUrl:
-            aga.logoUrl ||
-            `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`,
+          logoUrl: aga.logoUrl || defaultLeaderLogo,
         },
       ];
     }),
@@ -213,9 +209,7 @@ export default function Home() {
             <a href="#agalar" className="text-rose-600">
               ♛ Ağalar
             </a>
-            <a href="#sohbet" className="muted">
-              Sohbet
-            </a>
+            <button onClick={() => setChatOpen(true)} className="muted">Sohbet</button>
             <a href="#hakkinda" className="muted">
               Hakkında
             </a>
@@ -381,7 +375,7 @@ export default function Home() {
               </button>
             ))}
           </div>
-          <div className="mt-4 grid gap-2">
+          <div className="mt-4 grid max-h-[680px] gap-2 overflow-y-auto pr-1 sm:pr-2">
             {ranked.map((city, index) => {
               const aga = agas[city.name],
                 share = (total ? (city.votes / total) * 100 : 0).toFixed(1);
@@ -439,18 +433,7 @@ export default function Home() {
                         aria-label={`${aga.title} sitesini aç`}
                         className="flex min-w-0 items-center gap-2 rounded-lg transition hover:opacity-80"
                       >
-                        {aga.logoUrl ? (
-                          <img
-                            src={aga.logoUrl}
-                            alt={`${aga.title} logosu`}
-                            className="h-9 w-9 shrink-0 rounded-lg border bg-white object-cover"
-                            style={{ borderColor: "var(--line)" }}
-                          />
-                        ) : (
-                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-rose-600 text-base text-white">
-                            ♛
-                          </span>
-                        )}
+                        <img src={aga.logoUrl || defaultLeaderLogo} alt={`${aga.title} logosu`} className="h-9 w-9 shrink-0 rounded-lg border bg-white object-cover" style={{ borderColor: "var(--line)" }} />
                         <span className="min-w-0">
                           <span className="block truncate font-bold text-rose-600 underline underline-offset-2">
                             {aga.title}
@@ -480,7 +463,7 @@ export default function Home() {
                             rel="noreferrer"
                             className="flex items-center gap-1.5 rounded-lg bg-black/5 px-2 py-1.5 font-bold text-rose-600 transition hover:opacity-80 dark:bg-white/10"
                           >
-                            {former.logoUrl ? <img src={former.logoUrl} alt="" className="h-4 w-4 rounded object-cover" /> : "♛"}
+                            <img src={former.logoUrl || defaultLeaderLogo} alt="" className="h-4 w-4 rounded object-cover" />
                             <span>{former.title}</span>
                           </a>
                         ))}
@@ -490,61 +473,6 @@ export default function Home() {
                 </article>
               );
             })}
-          </div>
-        </section>
-        <section id="sohbet" className="panel mt-9 rounded-3xl p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-extrabold">💬 Meydan Sohbeti</h2>
-              <p className="mt-1 text-xs muted">Şehirler, oylar ve liderlik yarışı hakkında konuş.</p>
-            </div>
-            <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-600">
-              canlı
-            </span>
-          </div>
-          <div
-            className="mt-4 max-h-72 space-y-2 overflow-y-auto rounded-2xl border p-3"
-            style={{ borderColor: "var(--line)", background: "var(--soft)" }}
-          >
-            {chatMessages.length ? chatMessages.map((message) => (
-              <div key={message.id} className="rounded-xl bg-white/60 px-3 py-2 text-xs dark:bg-black/10">
-                <div className="flex items-center justify-between gap-2">
-                  <b className="text-rose-600">{message.nickname}</b>
-                  <time className="muted text-[10px]">
-                    {new Date(message.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                  </time>
-                </div>
-                <p className="mt-1 break-words leading-relaxed">{message.body}</p>
-              </div>
-            )) : (
-              <p className="py-8 text-center text-xs muted">Henüz mesaj yok. Meydanı sen başlat!</p>
-            )}
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-[150px_1fr_auto]">
-            <input
-              value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
-              maxLength={32}
-              placeholder="Takma ad"
-              className="rounded-xl border bg-transparent px-3 py-2 text-xs outline-none"
-              style={{ borderColor: "var(--line)" }}
-            />
-            <input
-              value={chatMessage}
-              onChange={(event) => setChatMessage(event.target.value)}
-              onKeyDown={(event) => { if (event.key === "Enter") void sendChat(); }}
-              maxLength={500}
-              placeholder="Mesajını yaz..."
-              className="rounded-xl border bg-transparent px-3 py-2 text-xs outline-none"
-              style={{ borderColor: "var(--line)" }}
-            />
-            <button
-              onClick={() => void sendChat()}
-              disabled={!chatMessage.trim() || chatSending}
-              className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {chatSending ? "Gönderiliyor" : "Gönder"}
-            </button>
           </div>
         </section>
         <section id="hakkinda" className="panel mt-9 rounded-3xl p-6">
@@ -563,6 +491,42 @@ export default function Home() {
           </p>
         </section>
       </main>
+      <div className="fixed bottom-4 left-4 z-40 sm:bottom-6 sm:left-6">
+        {chatOpen && (
+          <section className="panel mb-3 flex w-[min(23rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl shadow-2xl" aria-label="Meydan sohbeti">
+            <div className="flex items-center justify-between border-b px-4 py-3" style={{ borderColor: "var(--line)", background: "var(--soft)" }}>
+              <div>
+                <h2 className="text-sm font-extrabold">💬 Meydan Sohbeti</h2>
+                <p className="text-[10px] muted">Şehirler ve liderlik yarışı hakkında konuş.</p>
+              </div>
+              <button onClick={() => setChatOpen(false)} aria-label="Sohbeti kapat" className="grid h-7 w-7 place-items-center rounded-full text-lg muted hover:bg-black/5 dark:hover:bg-white/10">×</button>
+            </div>
+            <div className="max-h-72 min-h-40 space-y-2 overflow-y-auto p-3" style={{ background: "var(--panel)" }}>
+              {chatMessages.length ? chatMessages.map((message) => (
+                <div key={message.id} className="rounded-xl bg-black/5 px-3 py-2 text-xs dark:bg-white/10">
+                  <div className="flex items-center justify-between gap-2">
+                    <b className="text-rose-600">{message.nickname}</b>
+                    <time className="muted text-[10px]">{new Date(message.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</time>
+                  </div>
+                  <p className="mt-1 break-words leading-relaxed">{message.body}</p>
+                </div>
+              )) : <p className="py-8 text-center text-xs muted">Henüz mesaj yok. Meydanı sen başlat!</p>}
+            </div>
+            <div className="grid gap-2 border-t p-3" style={{ borderColor: "var(--line)" }}>
+              <input value={nickname} onChange={(event) => setNickname(event.target.value)} maxLength={32} placeholder="Takma ad" className="rounded-xl border bg-transparent px-3 py-2 text-xs outline-none" style={{ borderColor: "var(--line)" }} />
+              <div className="flex gap-2">
+                <input value={chatMessage} onChange={(event) => setChatMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void sendChat(); }} maxLength={500} placeholder="Mesajını yaz..." className="min-w-0 flex-1 rounded-xl border bg-transparent px-3 py-2 text-xs outline-none" style={{ borderColor: "var(--line)" }} />
+                <button onClick={() => void sendChat()} disabled={!chatMessage.trim() || chatSending} className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{chatSending ? "…" : "Gönder"}</button>
+              </div>
+            </div>
+          </section>
+        )}
+        <button onClick={() => setChatOpen((open) => !open)} aria-expanded={chatOpen} aria-label="Meydan sohbetini aç" className="flex h-14 items-center gap-2 rounded-full bg-rose-600 px-5 text-sm font-bold text-white shadow-xl shadow-rose-600/30 transition hover:scale-105">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-white/20">💬</span>
+          Sohbet
+          {!chatOpen && <span className="h-2 w-2 rounded-full bg-emerald-300 ring-2 ring-rose-600" />}
+        </button>
+      </div>
       {selected && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
           <div
@@ -594,6 +558,28 @@ export default function Home() {
                 ? "Aktif oyun bu şehirde"
                 : `${selected.name}'a Oy Ver`}
             </button>
+            {(agas[selected.name] || formerAgas[selected.name]?.length) && (
+              <section className="mt-5 border-t pt-4" style={{ borderColor: "var(--line)" }}>
+                <div className="flex items-center justify-between">
+                  <b className="text-sm">{selected.name} Liderleri</b>
+                  <span className="rounded-full bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-600">{(agas[selected.name] ? 1 : 0) + (formerAgas[selected.name]?.length ?? 0)} kayıt</span>
+                </div>
+                <div className="mt-3 max-h-52 space-y-2 overflow-y-auto pr-1">
+                  {agas[selected.name] && (
+                    <a href={linkForDisplay(agas[selected.name].url)} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-2xl border p-3 transition hover:border-rose-300" style={{ borderColor: "var(--line)", background: "var(--soft)" }}>
+                      <img src={agas[selected.name].logoUrl || defaultLeaderLogo} alt={`${agas[selected.name].title} logosu`} className="h-10 w-10 rounded-xl bg-white object-cover" />
+                      <span className="min-w-0"><span className="block truncate text-sm font-extrabold">{agas[selected.name].title}</span><span className="text-[10px] font-bold text-rose-600">Mevcut lider · Siteye git ↗</span></span>
+                    </a>
+                  )}
+                  {formerAgas[selected.name]?.map((former, historyIndex) => (
+                    <a key={`${former.title}-${former.createdAt}-${historyIndex}`} href={linkForDisplay(former.url)} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-2xl border p-3 transition hover:border-rose-300" style={{ borderColor: "var(--line)" }}>
+                      <img src={former.logoUrl || defaultLeaderLogo} alt={`${former.title} logosu`} className="h-10 w-10 rounded-xl bg-white object-cover" />
+                      <span className="min-w-0"><span className="block truncate text-sm font-bold">{former.title}</span><span className="text-[10px] muted">Eski lider · {new Date(former.createdAt).toLocaleDateString("tr-TR")}</span></span>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
             <div
               className="mt-5 border-t pt-4"
               style={{ borderColor: "var(--line)" }}
