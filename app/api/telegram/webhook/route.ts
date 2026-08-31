@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
   });
   return NextResponse.json({ ok: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Bilinmeyen webhook hatası";
+    const message = error instanceof Error ? error.message : JSON.stringify(error);
     console.error("Telegram ödeme webhook hatası:", error);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
