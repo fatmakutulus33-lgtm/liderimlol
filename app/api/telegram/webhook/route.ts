@@ -103,18 +103,18 @@ export async function POST(request: NextRequest) {
     const plate = match[1].padStart(2, "0");
     await telegramApi("sendInvoice", {
       chat_id: message.chat.id,
-      title: "Liderim.lol Ağalık Başvurusu",
+      title: "Liderim.lol Liderlik Başvurusu",
       description: `${plate} plakalı şehir için liderlik başvurusu`,
       payload: `aga_${plate}_${match[2] ?? message.from?.id ?? "user"}`,
       currency: "XTR",
-      prices: [{ label: "Ağalık başvurusu", amount: STAR_PRICE }],
+      prices: [{ label: "Liderlik başvurusu", amount: STAR_PRICE }],
     });
     return NextResponse.json({ ok: true });
   }
 
   await telegramApi("sendMessage", {
     chat_id: message.chat.id,
-    text: "Bir şehirden ‘100 Stars ile başvur’ düğmesine dokunarak ağalık başvurusunu başlatabilirsin.",
+    text: "Bir şehirden ‘100 Stars ile başvur’ düğmesine dokunarak liderlik başvurusunu başlatabilirsin.",
   });
   return NextResponse.json({ ok: true });
 }

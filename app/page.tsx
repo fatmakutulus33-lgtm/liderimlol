@@ -202,11 +202,12 @@ export default function Home() {
               ★
             </span>
             liderim<span className="text-rose-600">.lol</span>
+            <span className="rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-bold muted" style={{ borderColor: "var(--line)" }}>v0.0.1</span>
           </a>
           <nav className="hidden gap-5 text-sm font-bold sm:flex">
             <a href="#siralama">Sıralama</a>
-            <a href="#agalar" className="text-rose-600">
-              ♛ Ağalar
+            <a href="#liderler" className="text-rose-600">
+              ♛ Liderler
             </a>
             <button onClick={() => setChatOpen(true)} className="muted">Sohbet</button>
             <a href="#hakkinda" className="muted">
@@ -292,7 +293,7 @@ export default function Home() {
           </div>
         </section>
         <section
-          id="agalar"
+          id="liderler"
           className="panel mt-7 rounded-3xl p-5 sm:p-6"
           style={{
             background: "linear-gradient(120deg,var(--panel),var(--soft))",

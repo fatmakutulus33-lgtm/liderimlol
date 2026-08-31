@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
     if (body.action === "claim") {
       if (typeof body.title !== "string" || typeof body.url !== "string" || body.title.length > 120 || body.url.length > 2048) return Response.json({ error: "Başvuru bilgileri çok uzun." }, { status: 400 });
-      const title = body.title.trim() || "İsimsiz Ağa";
+      const title = body.title.trim() || "İsimsiz Lider";
       const logoUrl = typeof body.logoUrl === "string" && body.logoUrl.length <= 2048 ? body.logoUrl : null;
       // Her şehir için yalnızca ilk liderlik ücretsizdir. Birincil anahtar
       // çakışması, aynı şehre yapılan sonraki başvuruyu ücretli akışa geçirir.
